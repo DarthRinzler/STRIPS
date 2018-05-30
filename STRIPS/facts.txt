@@ -1,0 +1,9 @@
+﻿(human 
+	(Name graham)
+	(At home)
+)
+
+(home (adjacent road))
+(road (adjacent (store)))
+
+(treasure (at store))

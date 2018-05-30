@@ -1,0 +1,22 @@
+﻿(Infer
+	(Pre (a.Adjacent b))
+	(Post (b.Adjacent a))
+)
+
+(Move   
+	(Pre 
+		(and 
+			(a.Type Player) 
+			(b.Type Location)
+			(c.Type Location)
+			(a.At b)
+			(a.adjacent b)
+		)
+	)
+	(Post
+		(and
+			(a.At c)
+			(not (a.At b))
+		)
+	)
+)
