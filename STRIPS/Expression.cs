@@ -8,8 +8,8 @@ namespace STRIPS
 {
 	public abstract class Expression
 	{
-		public abstract bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr);
-		public abstract void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert);
+		public abstract bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr);
+		public abstract void Apply(SObject[] parameters, SObject world, bool invert);
         public abstract string Print(SObject[] parameters);
 	}
 
@@ -22,7 +22,7 @@ namespace STRIPS
             Expressions = exprs;
 		}
 
-		public override bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
+		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
 		{
             failExpr = null;
             foreach (var expr in Expressions)
@@ -36,7 +36,7 @@ namespace STRIPS
             return true;
 		}
 
-		public override void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert)
+		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
             foreach (var expr in Expressions)
             {
@@ -59,7 +59,7 @@ namespace STRIPS
 			Expr = expr;
 		}
 
-		public override bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
+		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
 		{
             failExpr = null;
 			if (Expr.Evaluate(parameters, world, out failExpr))
@@ -70,7 +70,7 @@ namespace STRIPS
             return true;
 		}
 
-		public override void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert)
+		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
 			Expr.Apply(parameters, world, !invert);
 		}
@@ -92,7 +92,7 @@ namespace STRIPS
 			_rand = new Random();
 		}
 
-		public override bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
+		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
 		{
             failExpr = null;
             bool ret = false;
@@ -108,7 +108,7 @@ namespace STRIPS
             else return true;
 		}
 
-		public override void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert)
+		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
             var idx = _rand.Next(0, Expressions.Length);
             Expressions[idx].Apply(parameters, world, invert);
@@ -133,7 +133,7 @@ namespace STRIPS
             ObjectIdx = objectIdx;
 		}
 
-		public override bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
+		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
 		{
             failExpr = null;
 			SObject sobj = parameters[ObjectIdx];
@@ -145,7 +145,7 @@ namespace STRIPS
             else return true;
 		}
 
-		public override void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert)
+		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
 			SObject sobj = parameters[ObjectIdx];
             if (!invert) sobj.Properties[ObjectName] = null;
@@ -175,7 +175,7 @@ namespace STRIPS
             PropertyValueIdx = propertyValueIdx;
 		}
 
-        public override bool Evaluate(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
+        public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
         {
             failExpr = null;
             SObject sobj = parameters[ObjectIdx];
@@ -197,7 +197,7 @@ namespace STRIPS
                 else
                 {
                     SObject pval = null;
-                    if (world.TryGetValue(PropertyValue, out pval))
+                    if (world.Properties.TryGetValue(PropertyValue, out pval))
                     {
                         ret = val == pval; 
                         if (!ret)
@@ -210,7 +210,7 @@ namespace STRIPS
             return ret;
         }
 
-		public override void Apply(SObject[] parameters, Dictionary<string, SObject> world, bool invert)
+		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
             SObject sobj = parameters[ObjectIdx];
 
@@ -233,7 +233,7 @@ namespace STRIPS
             else
             {
                 SObject pval = null;
-                if (world.TryGetValue(PropertyValue, out pval))
+                if (world.Properties.TryGetValue(PropertyValue, out pval))
                 {
                     if (invert && sobj[PropertyName] == pval)
                     {

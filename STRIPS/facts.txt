@@ -1,6 +1,4 @@
 ﻿(location)
-(graham)
-(road)
 
 (store 
 	(adjacent road)

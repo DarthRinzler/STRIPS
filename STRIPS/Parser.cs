@@ -7,30 +7,6 @@ using System.Threading.Tasks;
 
 namespace STRIPS
 {
-    /*
-    (InferAdjacency (a b)
-        (Pre (a.Adjacent b))
-        (Post (b.Adjacent a))
-    )
-
-    (Move (obj loc dest)
-        (Pre 
-            (and 
-                (obj.Type Player) 
-                (loc.Type Location)
-                (dest.Type Location)
-                (obj.At loc)
-                (obj.Adjacent dest)
-            )
-        )
-        (Post
-            (and
-                (obj.At dest)
-                (not (obj.At loc))
-            )
-        )
-    )
-    */
     class Parser
 	{
         private Tokenizer _tok;
@@ -44,9 +20,9 @@ namespace STRIPS
             : this(new FileStream(file, FileMode.Open))
         { }
 
-        public Dictionary<string, SObject> ParseObjects()
+        public SObject ParseObjects()
         {
-            var ret = new Dictionary<string,SObject>();
+            var ret = new SObject("world");
             while(_tok.PeekToken() != null)
             {
                 ParseObject(ret); 
@@ -64,7 +40,7 @@ namespace STRIPS
             return ret.ToDictionary(a => a.Name);
         }
 
-        private void ParseObject(Dictionary<string, SObject> objects)
+        private void ParseObject(SObject world)
         {
             // Object Name
             Consume(TokenType.LParen);
@@ -80,9 +56,10 @@ namespace STRIPS
                 string propertyValue = Consume(TokenType.Id).Value;
 
                 SObject propertyValueObj = null;
-                if (!objects.TryGetValue(propertyValue, out propertyValueObj))
+                if (!world.Properties.TryGetValue(propertyValue, out propertyValueObj))
                 {
-                    throw new Exception("Unknown Object: " + propertyValue);
+                    propertyValueObj = new SObject(propertyValue);
+                    world[propertyValue] = propertyValueObj;
                 }
 
                 ret[propertyName] = propertyValueObj;
@@ -90,7 +67,7 @@ namespace STRIPS
             }
 
             Consume(TokenType.RParen);
-            objects[name] = ret;
+            world[name] = ret;
         }
 
         private SAction ParseAction()
