@@ -19,14 +19,14 @@ namespace STRIPS
 			Effect = effect;
 		}
 
-		public bool CanApply(SObject world)
+		public bool CanApply(SObject[] parameters, Dictionary<string, SObject> world, out Expression failExpr)
 		{
-			return Precondition.Evaluate(world);
+			return Precondition.Evaluate(parameters, world, out failExpr);
 		}
 
-		public void Apply(SObject world)
+		public void Apply(SObject[] parameters, Dictionary<string, SObject> world)
 		{
-			Effect.Apply(world, false);
+			Effect.Apply(parameters, world, false);
 		}
 	}
 }

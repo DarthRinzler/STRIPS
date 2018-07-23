@@ -8,26 +8,29 @@ using System.Threading.Tasks;
 namespace STRIPS
 {
     /*
-        (Infer
-            (Pre (a.Adjacent b))
-            (Post (b.Adjacent a))
-        )
+    (InferAdjacency (a b)
+        (Pre (a.Adjacent b))
+        (Post (b.Adjacent a))
+    )
 
-        (Move   
-            (Pre 
-                (and 
-                    (a.Type Player) 
-                    (b.Type Location)
-                    (c.Type Location)
-                    (a.Location b)
-                    (a.adjacent b)
-                )
-            )
-            (Post 
-                (a.Location c)
+    (Move (obj loc dest)
+        (Pre 
+            (and 
+                (obj.Type Player) 
+                (loc.Type Location)
+                (dest.Type Location)
+                (obj.At loc)
+                (obj.Adjacent dest)
             )
         )
-     */
+        (Post
+            (and
+                (obj.At dest)
+                (not (obj.At loc))
+            )
+        )
+    )
+    */
     class Parser
 	{
         private Tokenizer _tok;
@@ -41,55 +44,53 @@ namespace STRIPS
             : this(new FileStream(file, FileMode.Open))
         { }
 
-        public SObject ParseObjects()
+        public Dictionary<string, SObject> ParseObjects()
         {
-            var ret = new List<SObject>();
+            var ret = new Dictionary<string,SObject>();
             while(_tok.PeekToken() != null)
             {
-                ret.Add(ParseObject()); 
+                ParseObject(ret); 
             }
-            return new SObject("world", ret);
+            return ret;
         }
 
-        public SAction[] ParseActions()
+        public Dictionary<string, SAction> ParseActions()
         {
             var ret = new List<SAction>();
             while(_tok.PeekToken() != null)
             {
                 ret.Add(ParseAction()); 
             }
-            return ret.ToArray();
+            return ret.ToDictionary(a => a.Name);
         }
 
-        private SObject ParseObject()
+        private void ParseObject(Dictionary<string, SObject> objects)
         {
             // Object Name
             Consume(TokenType.LParen);
             var name = Consume(TokenType.Id).Value;
+            var ret = new SObject(name);
 
             // List of Object Properties
-            var properties = new List<SObject>();
             while (_tok.PeekToken().Type != TokenType.RParen)
             {
-                // If Nested Prop
-                if (_tok.PeekToken().Type == TokenType.LParen)
+                Consume(TokenType.LParen);
+
+                string propertyName = Consume(TokenType.Id).Value;
+                string propertyValue = Consume(TokenType.Id).Value;
+
+                SObject propertyValueObj = null;
+                if (!objects.TryGetValue(propertyValue, out propertyValueObj))
                 {
-                    var property = ParseObject();
-                    properties.Add(property);
+                    throw new Exception("Unknown Object: " + propertyValue);
                 }
-                // If Inline Prop
-                else
-                {
-                    var pVal = Consume(TokenType.Id).Value;
-                    var prop = new SObject(pVal);
-                    properties.Add(prop);
-                    break;
-                }
+
+                ret[propertyName] = propertyValueObj;
+                Consume(TokenType.RParen);
             }
 
             Consume(TokenType.RParen);
-
-            return new SObject(name, properties);
+            objects[name] = ret;
         }
 
         private SAction ParseAction()
@@ -98,16 +99,19 @@ namespace STRIPS
             Consume(TokenType.LParen);
             string name = Consume(TokenType.Id).Value;
 
+            // Signature
+            List<string> parameters = ParseSignature();
+
             // Pre Expression
             Consume(TokenType.LParen);
             Consume(TokenType.Pre);
-            Expression pre = ParseExpression();
+            Expression pre = ParseExpression(parameters);
             Consume(TokenType.RParen);
 
             // Post Expression
             Consume(TokenType.LParen);
             Consume(TokenType.Post);
-            Expression post = ParseExpression();
+            Expression post = ParseExpression(parameters);
             Consume(TokenType.RParen);
 
             Consume(TokenType.RParen);
@@ -115,7 +119,20 @@ namespace STRIPS
             return new SAction(name, pre, post);
         }
 
-        private Expression ParseExpression()
+        private List<string> ParseSignature()
+        {
+            var ret = new List<string>();
+            Consume(TokenType.LParen);
+            while(_tok.PeekToken().Type != TokenType.RParen)
+            {
+                string param = Consume(TokenType.Id).Value;
+                ret.Add(param);
+            }
+            Consume(TokenType.RParen);
+            return ret;
+        }
+
+        private Expression ParseExpression(List<string> parameters)
         {
             Expression ret = null;
             Consume(TokenType.LParen);
@@ -128,7 +145,7 @@ namespace STRIPS
                 List<Expression> andExpressions = new List<Expression>();
                 while(_tok.PeekToken().Type != TokenType.RParen)
                 {
-                    Expression expr = ParseExpression();
+                    Expression expr = ParseExpression(parameters);
                     andExpressions.Add(expr);
                 }
 
@@ -140,7 +157,7 @@ namespace STRIPS
                 List<Expression> orExpressions = new List<Expression>();
                 while(_tok.PeekToken().Type != TokenType.RParen)
                 {
-                    Expression expr = ParseExpression();
+                    Expression expr = ParseExpression(parameters);
                     orExpressions.Add(expr);
                 }
 
@@ -149,12 +166,12 @@ namespace STRIPS
             else if (next == TokenType.Not)
             {
                 Consume(TokenType.Not);
-                var expr = ParseExpression();
+                var expr = ParseExpression(parameters);
                 ret = new NotExpression(expr);
             }
             else
             {
-                ret = ParsePredicate();
+                ret = ParsePredicate(parameters);
             }
 
             Consume(TokenType.RParen);
@@ -162,12 +179,19 @@ namespace STRIPS
             return ret;
         }
 
-        private Expression ParsePredicate()
+        private Expression ParsePredicate(List<string> parameters)
         {
             Expression ret = null;
 
-            //Consume(TokenType.LParen);
             var objName = Consume(TokenType.Id).Value;
+
+            // Verify that referenced parameter has been declared
+            int objectIdx = parameters.IndexOf(objName);
+            if (objectIdx == -1)
+            {
+                throw new Exception("Unknown variable reference: "+objName);
+            }
+
             Consume(TokenType.Period);
             var propertyName = Consume(TokenType.Id).Value;
 
@@ -175,12 +199,17 @@ namespace STRIPS
             var next = _tok.PeekToken().Type;
             if (next == TokenType.RParen)
             {
-                ret = new BooleanPredicateExpression(objName, propertyName);
+                ret = new BooleanPredicateExpression(objName, propertyName, objectIdx);
             }
             else
             {
                 var propertyValue = Consume(TokenType.Id).Value;
-                ret = new KeyValuePredicateExpression(objName, propertyName, propertyValue);
+                int propertyValIdx = parameters.IndexOf(propertyValue);
+                if (propertyValIdx == -1)
+                {
+                    ret = new KeyValuePredicateExpression(objName, propertyName, propertyValue, objectIdx);
+                }
+                else ret = new KeyValuePredicateExpression(objName, propertyName, propertyValue, objectIdx, propertyValIdx);
             }
 
             return ret;
@@ -206,7 +235,7 @@ namespace STRIPS
         private int _peek;
         private char[] _singleCharStrings = new[]
         {
-            '(', ')', '{', '}', '.', '=', ','
+            '(', ')', '{', '}', '.' 
         };
 
         public Tokenizer(Stream stream)
@@ -261,7 +290,7 @@ namespace STRIPS
 			}
 
 			var ret = sb.ToString();
-			return sb.ToString();
+			return sb.ToString().ToLower();
 		}
 
 		private int Read()

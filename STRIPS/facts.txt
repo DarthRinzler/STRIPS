@@ -1,9 +1,25 @@
-﻿(human 
-	(Name graham)
-	(At home)
+﻿(location)
+(graham)
+(road)
+
+(store 
+	(adjacent road)
+	(type location)
 )
 
-(home (adjacent road))
-(road (adjacent (store)))
+(road 
+	(adjacent store)
+	(type location)
+)
+
+(home 
+	(adjacent road)
+	(type location)
+)
+
+(human 
+	(Name graham)
+	(at home)
+)
 
 (treasure (at store))
