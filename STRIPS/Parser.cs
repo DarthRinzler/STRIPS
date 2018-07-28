@@ -25,7 +25,8 @@ namespace STRIPS
             var ret = new SObject("world");
             while(_tok.PeekToken() != null)
             {
-                ParseObject(ret); 
+                var obj = ParseObject();
+                ret[obj.Name] = obj;
             }
             return ret;
         }
@@ -40,34 +41,31 @@ namespace STRIPS
             return ret.ToDictionary(a => a.Name);
         }
 
-        private void ParseObject(SObject world)
+        private SObject ParseObject()
         {
             // Object Name
             Consume(TokenType.LParen);
             var name = Consume(TokenType.Id).Value;
             var ret = new SObject(name);
 
-            // List of Object Properties
-            while (_tok.PeekToken().Type != TokenType.RParen)
+            // If Single inline property
+            if (_tok.PeekToken().Type == TokenType.Id)
             {
-                Consume(TokenType.LParen);
-
-                string propertyName = Consume(TokenType.Id).Value;
-                string propertyValue = Consume(TokenType.Id).Value;
-
-                SObject propertyValueObj = null;
-                if (!world.Properties.TryGetValue(propertyValue, out propertyValueObj))
+                var propertyName = Consume(TokenType.Id).Value;
+                ret[propertyName] = null;
+            }
+            // If List of Properties
+            else
+            {
+                while (_tok.PeekToken().Type != TokenType.RParen)
                 {
-                    propertyValueObj = new SObject(propertyValue);
-                    world[propertyValue] = propertyValueObj;
+                    var obj = ParseObject();
+                    ret[obj.Name] = obj;
                 }
-
-                ret[propertyName] = propertyValueObj;
-                Consume(TokenType.RParen);
             }
 
             Consume(TokenType.RParen);
-            world[name] = ret;
+            return ret;
         }
 
         private SAction ParseAction()

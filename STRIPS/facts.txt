@@ -1,4 +1,14 @@
-﻿(location)
+﻿(human 
+	(Name 
+		(first graham )
+		(last (henry) )
+	)
+	(at home)
+	(has Money)
+)
+
+
+(location)
 
 (store 
 	(adjacent road)
@@ -15,9 +25,6 @@
 	(type location)
 )
 
-(human 
-	(Name graham)
-	(at home)
-)
+(food (at store))
 
-(treasure (at store))
+(test a)

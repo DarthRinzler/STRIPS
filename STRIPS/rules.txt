@@ -1,34 +1,58 @@
 ﻿(InferAdjacency (a b)
-	(Pre (a.adjacent b))
-	(Post (b.adjacent a))
+	(Pre (a adjacent b))
+	(Post (b adjacent a))
 )
 
 (Move (obj src dest)
 	(Pre 
 		(and 
-			(src.type location)
-			(dest.type location)
-			(obj.at src)
-			(src.adjacent dest)
+			(src type location)
+			(dest type location)
+			(obj at src)
+			(src adjacent dest)
 		)
 	)
 	(Post
 		(and
-			(obj.at dest)
-			(not (obj.at src))
+			(obj at dest)
+			(not (obj at src))
 		)
 	)
 )
 
-(Get (owner obj loc)
+(Transfer (src dest obj)
 	(Pre
 		(and
-			(loc.type location)
-			(owner.at loc)	
-			(obj.at loc)
+			(src has obj)	
+			(not (dest has obj))
 		)
 	)
 	(Post
-		(owner.has obj)	
+		(and
+			(not (src has obj))
+			(dest has obj)
+		)
+	)
+)
+
+(Copy (src dest data)
+	(Pre
+		(src has obj)	
+	)
+	(Post
+		(and
+			(src has obj)
+			(dest has obj)
+		)
+	)
+)
+
+(Move (obj loca locb)
+	(Pre 
+		(Transfer.Pre loca locb obj)
+		(loca adjacent locb)
+	)
+	(Post 
+		(Transfer.Post loca locb obj)
 	)
 )

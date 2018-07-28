@@ -23,6 +23,15 @@ namespace STRIPS
             }
         }
 
+        public SObject(SObject other)
+        {
+            if (other != null)
+            {
+                this.Name = other.Name;
+                this.Properties = other.Properties.ToDictionary(kv => kv.Key, kv => new SObject(kv.Value));
+            }
+        }
+
         public SObject(string name)
 		{
             Properties = new Dictionary<string, SObject>();
@@ -38,22 +47,36 @@ namespace STRIPS
                 pvalues = Properties
                     .Select(p => String.Format("{0}:{1}", p.Key, p.Value.Name))
                     .Aggregate((a, e) => a + "|" + e);
+                return String.Format("{0}:{{{1}}}", Name, pvalues);
             }
+            else return String.Format("{0}", Name);
 
-            return String.Format("{0}:{{{1}}}", Name, pvalues);
         }
 
         public bool Satisfies(SObject goal)
         {
-            foreach (var gp in goal.Properties.Values)
+            foreach (var gp in goal.Properties)
             {
-                SObject prop = null;
-                if (Properties.TryGetValue(gp.Name, out prop))
+                // Boolean
+                if (gp.Value == null)
                 {
-                    if (!prop.Satisfies(gp))
+                    if (!Properties.ContainsKey(gp.Key))
                     {
                         return false;
                     }
+                }
+                // Reference
+                else
+                {
+                    SObject prop = null;
+                    if (Properties.TryGetValue(gp.Key, out prop))
+                    {
+                        if (!prop.Satisfies(gp.Value))
+                        {
+                            return false;
+                        }
+                    }
+                    else return false;
                 }
             }
             return true;

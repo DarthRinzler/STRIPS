@@ -9,14 +9,35 @@ namespace STRIPS
 {
 	class Program
 	{
+        static Dictionary<string, SAction> Actions;
+        static SObject World;
+
 		static void Main(string[] args)
 		{
-            var aparser = new Parser("rules.txt");
-            var actions = aparser.ParseActions();
 
             var fparser = new Parser("facts.txt");
-            var world = fparser.ParseObjects();
+            World = fparser.ParseObjects();
 
+            var aparser = new Parser("rules.txt");
+            var Actions = aparser.ParseActions();
+
+            GoalMode();
+		}
+
+        static void GoalMode()
+        {
+            SObject start = World;
+            SObject goal = new SObject("goal");
+            goal["human"] = new SObject(World["human"]);
+
+            while(!start.Satisfies(goal))
+            {
+                
+            }
+        }
+
+        static void DebugMode()
+        {
             while(true)
             {
                 Console.WriteLine("Enter Command");
@@ -24,17 +45,17 @@ namespace STRIPS
 
                 // If Action
                 SAction action = null;
-                if (actions.TryGetValue(input[0], out action))
+                if (Actions.TryGetValue(input[0], out action))
                 {
                     SObject[] parameters = input
                         .Skip(1)
-                        .Select(i => world[i])
+                        .Select(i => World[i])
                         .ToArray();
 
                     Expression failExpr = null;
-                    if (action.CanApply(parameters, world, out failExpr))
+                    if (action.CanApply(parameters, World, out failExpr))
                     {
-                        action.Apply(parameters, world);
+                        action.Apply(parameters, World);
                     }
                     else
                     {
@@ -48,6 +69,7 @@ namespace STRIPS
                     Console.WriteLine(newState);
                 }
             }
-		}
+
+        }
 	}
 }
