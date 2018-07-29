@@ -25,8 +25,7 @@ namespace STRIPS
             var ret = new SObject("world");
             while(_tok.PeekToken() != null)
             {
-                var obj = ParseObject();
-                ret[obj.Name] = obj;
+                ParseObject(ret);
             }
             return ret;
         }
@@ -41,31 +40,58 @@ namespace STRIPS
             return ret.ToDictionary(a => a.Name);
         }
 
-        private SObject ParseObject()
+        private void ParseObject(SObject parent)
         {
             // Object Name
             Consume(TokenType.LParen);
             var name = Consume(TokenType.Id).Value;
-            var ret = new SObject(name);
+            var next = _tok.PeekToken().Type;
 
             // If Single inline property
-            if (_tok.PeekToken().Type == TokenType.Id)
+            if (next == TokenType.Id)
             {
                 var propertyName = Consume(TokenType.Id).Value;
-                ret[propertyName] = null;
+                var propObj = new SObject(propertyName);
+
+                // If parent already contains name
+                if (parent.Properties.ContainsKey(name))
+                {
+                    parent[name][propertyName] = propObj;
+                }
+                else
+                {
+                    var ret = new SObject(name);
+                    ret[propertyName] = propObj;
+                    parent[name] = ret;
+                }
             }
             // If List of Properties
+            else if (next != TokenType.RParen)
+            {
+                // If parent already contains name
+                if (parent.Properties.ContainsKey(name))
+                {
+                    while (_tok.PeekToken().Type != TokenType.RParen)
+                    {
+                        ParseObject(parent);
+                    }
+                }
+                else
+                {
+                    var ret = new SObject(name);
+                    while (_tok.PeekToken().Type != TokenType.RParen)
+                    {
+                        ParseObject(ret);
+                    }
+                    parent[name] = ret;
+                }
+            }
             else
             {
-                while (_tok.PeekToken().Type != TokenType.RParen)
-                {
-                    var obj = ParseObject();
-                    ret[obj.Name] = obj;
-                }
+                parent[name] = new SObject(name);
             }
 
             Consume(TokenType.RParen);
-            return ret;
         }
 
         private SAction ParseAction()
@@ -167,7 +193,6 @@ namespace STRIPS
                 throw new Exception("Unknown variable reference: "+objName);
             }
 
-            Consume(TokenType.Period);
             var propertyName = Consume(TokenType.Id).Value;
 
             // If Boolean Predicate
@@ -292,7 +317,7 @@ namespace STRIPS
 
 	enum TokenType
 	{
-		LParen, RParen, Id, Comma, LBracket, RBracket, Pre, Post, Period, And, Or, Not
+		LParen, RParen, Id, LBracket, RBracket, Pre, Post, And, Or, Not
 	}
 
 	class Token
@@ -305,7 +330,6 @@ namespace STRIPS
 			Value = value.ToLowerInvariant();
             if (Value == "(") Type = TokenType.LParen;
             else if (Value == ")") Type = TokenType.RParen;
-            else if (Value == ".") Type = TokenType.Period;
             else if (Value == "and") Type = TokenType.And;
             else if (Value == "or") Type = TokenType.Or;
             else if (Value == "not") Type = TokenType.Not;

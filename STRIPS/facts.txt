@@ -1,10 +1,16 @@
 ﻿(human 
+	(IsHungry)
 	(Name 
 		(first graham )
 		(last (henry) )
 	)
 	(at home)
 	(has Money)
+	(has car)
+	(has 
+		(keyboard)
+		(apple)
+	)
 )
 
 
@@ -28,3 +34,6 @@
 (food (at store))
 
 (test a)
+
+
+
