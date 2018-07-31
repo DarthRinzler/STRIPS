@@ -14,26 +14,18 @@ namespace STRIPS
 
 		static void Main(string[] args)
 		{
-
             var fparser = new Parser("facts.txt");
             World = fparser.ParseObjects();
 
             var aparser = new Parser("rules.txt");
-            var Actions = aparser.ParseActions();
+            Actions = aparser.ParseActions();
 
-            GoalMode();
+            DebugMode();
 		}
 
         static void GoalMode()
         {
-            SObject start = World;
-            SObject goal = new SObject("goal");
-            goal["human"] = new SObject(World["human"]);
-
-            while(!start.Satisfies(goal))
-            {
-                
-            }
+            SObject state = World;
         }
 
         static void DebugMode()
@@ -69,7 +61,6 @@ namespace STRIPS
                     Console.WriteLine(newState);
                 }
             }
-
         }
 	}
 }

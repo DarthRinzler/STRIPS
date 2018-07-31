@@ -45,9 +45,10 @@ namespace STRIPS
             if (Properties.Any())
             {
                 pvalues = Properties
-                    .Select(p => String.Format("{0}:{1}", p.Key, p.Value.Name))
+                    .Select(p => p.Value.ToString())
                     .Aggregate((a, e) => a + "|" + e);
-                return String.Format("{0}:{{{1}}}", Name, pvalues);
+
+                return String.Format("{0}:{1}", Name, pvalues);
             }
             else return String.Format("{0}", Name);
 
@@ -80,6 +81,39 @@ namespace STRIPS
                 }
             }
             return true;
+        }
+
+        public void GetNonSatisfyingProperties(SObject goal, List<SObject> missing)
+        {
+            foreach (var gp in goal.Properties)
+            {
+                // Boolean
+                if (gp.Value == null)
+                {
+                    if (!Properties.ContainsKey(gp.Key))
+                    {
+                        missing.Add(gp.Value);
+                    }
+                }
+                // Reference
+                else
+                {
+                    SObject prop = null;
+                    if (Properties.TryGetValue(gp.Key, out prop))
+                    {
+                        prop.GetNonSatisfyingProperties(gp.Value, missing);
+                    }
+                    else
+                    {
+                        missing.Add(gp.Value);
+                    }
+                }
+            }
+        }
+
+        public SObject Clone()
+        {
+            return new SObject(this);
         }
     }
 }

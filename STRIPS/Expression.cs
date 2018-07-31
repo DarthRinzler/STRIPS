@@ -158,7 +158,100 @@ namespace STRIPS
         }
     }
 
-	public class KeyValuePredicateExpression : Expression
+    public class ReferenceExpression : Expression
+    {
+        private List<KV> _params;
+
+        public ReferenceExpression(List<KV> parameters)
+        {
+            _params = parameters;
+        }
+
+        public override void Apply(SObject[] parameters, SObject world, bool invert)
+        {
+            SObject key = world;
+
+            for (int i=0; i<_params.Count; i++)
+            {
+                var p = _params[i];
+                string keyName = null;
+                if (p.Idx >= 0)
+                {
+                    keyName = parameters[p.Idx].Name;
+                }
+                else
+                {
+                    keyName = p.Key;
+                }
+
+                SObject val = null;
+                if (!invert)
+                { 
+                    if (!key.Properties.TryGetValue(keyName, out val))
+                    {
+                        key[keyName] = new SObject(keyName);
+                    }
+                }
+                else
+                {
+                    if (key.Properties.TryGetValue(keyName, out val) && i == _params.Count -1)
+                    {
+                        key.Properties.Remove(keyName);
+                        return;
+                    }
+                }
+                key = val;
+            }
+        }
+
+        public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
+        {
+            failExpr = null;
+            SObject key = world;
+
+            for (int i=0; i<_params.Count; i++)
+            {
+                var p = _params[i];
+                string keyName = null;
+                if (p.Idx >= 0)
+                {
+                    keyName = parameters[p.Idx].Name;
+                }
+                else
+                {
+                    keyName = p.Key;
+                }
+
+                if (!key.Properties.TryGetValue(keyName, out key))
+                {
+                    failExpr = this;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public override string Print(SObject[] parameters)
+        {
+            return _params
+                .Select(p => p.Idx >= 0 ? parameters[p.Idx].Name : p.Key)
+                .Aggregate((a, e) => a + " " + e);
+        }
+
+        public override string ToString()
+        {
+            return _params.Select(p => p.Key).Aggregate((a, e) => a + " " + e);
+        }
+    }
+
+    public class KV
+    {
+        public string Key { get; set; }
+        public int Idx { get; set; }
+    }
+
+    public class KeyValuePredicateExpression : Expression
 	{
 		public string ObjectName { get; }
 		public string PropertyName { get; }

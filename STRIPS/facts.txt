@@ -1,4 +1,4 @@
-﻿(human 
+﻿(player
 	(IsHungry)
 	(Name 
 		(first graham )
@@ -7,10 +7,7 @@
 	(at home)
 	(has Money)
 	(has car)
-	(has 
-		(keyboard)
-		(apple)
-	)
+	(type human)
 )
 
 

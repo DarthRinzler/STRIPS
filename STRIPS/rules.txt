@@ -1,4 +1,16 @@
-﻿(InferAdjacency (a b)
+﻿(Eat (obj food)
+	(Pre
+		(obj has food)	
+	)
+	(Post
+		(And
+			(not (obj has food))	
+			(not (obj IsHungry))
+		)
+	)
+)
+
+(InferAdjacency (a b)
 	(Pre (a adjacent b))
 	(Post (b adjacent a))
 )
@@ -35,24 +47,29 @@
 	)
 )
 
+
 (Copy (src dest data)
 	(Pre
-		(src has obj)	
+		(src has data)	
 	)
 	(Post
 		(and
-			(src has obj)
-			(dest has obj)
+			(src has data)
+			(dest has data)
 		)
 	)
 )
 
-(Move (obj loca locb)
-	(Pre 
-		(Transfer.Pre loca locb obj)
-		(loca adjacent locb)
+(Goal (player)
+	(Pre
+		(And
+			(player.name.first.graham)
+			(player.type.human)
+			(player.at.home)	
+			(not (player isHungry))
+		)	
 	)
-	(Post 
-		(Transfer.Post loca locb obj)
+	(Post
+		(player wins)	
 	)
 )

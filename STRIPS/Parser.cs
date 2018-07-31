@@ -182,37 +182,16 @@ namespace STRIPS
 
         private Expression ParsePredicate(List<string> parameters)
         {
-            Expression ret = null;
-
-            var objName = Consume(TokenType.Id).Value;
-
-            // Verify that referenced parameter has been declared
-            int objectIdx = parameters.IndexOf(objName);
-            if (objectIdx == -1)
+            List<KV> paramIdxs = new List<KV>();
+            while (_tok.PeekToken().Type != TokenType.RParen)
             {
-                throw new Exception("Unknown variable reference: "+objName);
+                var name = Consume(TokenType.Id).Value;
+                int idx = parameters.IndexOf(name);
+                var param = new KV() { Key = name, Idx = idx };
+                paramIdxs.Add(param);
             }
 
-            var propertyName = Consume(TokenType.Id).Value;
-
-            // If Boolean Predicate
-            var next = _tok.PeekToken().Type;
-            if (next == TokenType.RParen)
-            {
-                ret = new BooleanPredicateExpression(objName, propertyName, objectIdx);
-            }
-            else
-            {
-                var propertyValue = Consume(TokenType.Id).Value;
-                int propertyValIdx = parameters.IndexOf(propertyValue);
-                if (propertyValIdx == -1)
-                {
-                    ret = new KeyValuePredicateExpression(objName, propertyName, propertyValue, objectIdx);
-                }
-                else ret = new KeyValuePredicateExpression(objName, propertyName, propertyValue, objectIdx, propertyValIdx);
-            }
-
-            return ret;
+            return new ReferenceExpression(paramIdxs);
         }
 
         private Token Consume(TokenType t)
