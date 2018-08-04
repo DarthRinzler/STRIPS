@@ -104,17 +104,24 @@ namespace STRIPS
             List<string> parameters = ParseSignature();
 
             // Pre Expression
+            Expression pre = null;
             Consume(TokenType.LParen);
             Consume(TokenType.Pre);
-            Expression pre = ParseExpression(parameters);
+            if (_tok.PeekToken().Type != TokenType.RParen)
+            {
+                pre = ParseExpression(parameters);
+            }
             Consume(TokenType.RParen);
 
             // Post Expression
             Consume(TokenType.LParen);
             Consume(TokenType.Post);
-            Expression post = ParseExpression(parameters);
+            Expression post = null;
+            if (_tok.PeekToken().Type != TokenType.RParen)
+            {
+                post = ParseExpression(parameters);
+            }
             Consume(TokenType.RParen);
-
             Consume(TokenType.RParen);
 
             return new SAction(name, pre, post);
@@ -214,7 +221,7 @@ namespace STRIPS
         private int _peek;
         private char[] _singleCharStrings = new[]
         {
-            '(', ')', '{', '}', '.' 
+            '(', ')', '{', '}' 
         };
 
         public Tokenizer(Stream stream)

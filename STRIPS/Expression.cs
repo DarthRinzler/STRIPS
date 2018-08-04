@@ -8,8 +8,9 @@ namespace STRIPS
 {
 	public abstract class Expression
 	{
-		public abstract bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr);
-		public abstract void Apply(SObject[] parameters, SObject world, bool invert);
+		public abstract bool Evaluate(SObject[] runtimeParams, SObject world, out Expression failExpr);
+        public abstract bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs);
+		public abstract void Apply(SObject[] runtimeParams, SObject world, bool invert);
         public abstract string Print(SObject[] parameters);
 	}
 
@@ -35,6 +36,20 @@ namespace STRIPS
             }
             return true;
 		}
+
+        public override bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs)
+        {
+            bool failed = false;
+            foreach (var expr in Expressions)
+            {
+                if (!expr.GetAllFailExprs(runtimeParams, world, failExprs))
+                {
+                    failed = true;
+                    failExprs.Add(expr);
+                }
+            }
+            return failed;
+        }
 
 		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
@@ -70,6 +85,11 @@ namespace STRIPS
             return true;
 		}
 
+        public override bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs)
+        {
+            return !Expr.GetAllFailExprs(runtimeParams, world, failExprs);
+        }
+
 		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
 			Expr.Apply(parameters, world, !invert);
@@ -92,14 +112,15 @@ namespace STRIPS
 			_rand = new Random();
 		}
 
-		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
+		public override bool Evaluate(SObject[] runtimeParams, SObject world, out Expression failExpr)
 		{
             failExpr = null;
             bool ret = false;
             foreach (var expr in Expressions)
             {
-                ret |= expr.Evaluate(parameters, world, out failExpr);
+                ret |= expr.Evaluate(runtimeParams, world, out failExpr);
             }
+
             if (!ret)
             {
                 failExpr = this;
@@ -108,10 +129,27 @@ namespace STRIPS
             else return true;
 		}
 
+        public override bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs)
+        {
+            bool ret = false;
+            foreach (var expr in Expressions)
+            {
+                ret |= expr.GetAllFailExprs(runtimeParams, world, failExprs);
+            }
+
+            if (!ret)
+            {
+                failExprs.Add(this);
+                return false;
+            }
+            else return true;
+        }
+
 		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
-            var idx = _rand.Next(0, Expressions.Length);
-            Expressions[idx].Apply(parameters, world, invert);
+            throw new NotImplementedException();
+            //var idx = _rand.Next(0, Expressions.Length);
+            //Expressions[idx].Apply(parameters, world, invert);
 		}
 
         public override string Print(SObject[] parameters)
@@ -133,10 +171,10 @@ namespace STRIPS
             ObjectIdx = objectIdx;
 		}
 
-		public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
+		public override bool Evaluate(SObject[] runtimeParams, SObject world, out Expression failExpr)
 		{
             failExpr = null;
-			SObject sobj = parameters[ObjectIdx];
+			SObject sobj = runtimeParams[ObjectIdx];
             if (!sobj.Properties.ContainsKey(ObjectName))
             {
                 failExpr = this;
@@ -144,6 +182,12 @@ namespace STRIPS
             }
             else return true;
 		}
+
+        public override bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs)
+        {
+			SObject sobj = runtimeParams[ObjectIdx];
+            return sobj.Properties.ContainsKey(ObjectName);
+        }
 
 		public override void Apply(SObject[] parameters, SObject world, bool invert)
 		{
@@ -167,7 +211,7 @@ namespace STRIPS
             _params = parameters;
         }
 
-        public override void Apply(SObject[] parameters, SObject world, bool invert)
+        public override void Apply(SObject[] runtimeParams, SObject world, bool invert)
         {
             SObject key = world;
 
@@ -177,7 +221,7 @@ namespace STRIPS
                 string keyName = null;
                 if (p.Idx >= 0)
                 {
-                    keyName = parameters[p.Idx].Name;
+                    keyName = runtimeParams[p.Idx].Name;
                 }
                 else
                 {
@@ -204,7 +248,7 @@ namespace STRIPS
             }
         }
 
-        public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
+        public override bool Evaluate(SObject[] runtimeParams, SObject world, out Expression failExpr)
         {
             failExpr = null;
             SObject key = world;
@@ -215,7 +259,7 @@ namespace STRIPS
                 string keyName = null;
                 if (p.Idx >= 0)
                 {
-                    keyName = parameters[p.Idx].Name;
+                    keyName = runtimeParams[p.Idx].Name;
                 }
                 else
                 {
@@ -225,6 +269,32 @@ namespace STRIPS
                 if (!key.Properties.TryGetValue(keyName, out key))
                 {
                     failExpr = this;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public override bool GetAllFailExprs(SObject[] runtimeParams, SObject world, List<Expression> failExprs)
+        {
+            SObject key = world;
+
+            for (int i=0; i<_params.Count; i++)
+            {
+                var p = _params[i];
+                string keyName = null;
+                if (p.Idx >= 0)
+                {
+                    keyName = runtimeParams[p.Idx].Name;
+                }
+                else
+                {
+                    keyName = p.Key;
+                }
+
+                if (!key.Properties.TryGetValue(keyName, out key))
+                {
                     return false;
                 }
             }

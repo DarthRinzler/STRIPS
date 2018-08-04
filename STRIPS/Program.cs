@@ -14,18 +14,40 @@ namespace STRIPS
 
 		static void Main(string[] args)
 		{
-            var fparser = new Parser("facts.txt");
+            var fparser = new Parser("data\\objects.txt");
             World = fparser.ParseObjects();
 
-            var aparser = new Parser("rules.txt");
+            var aparser = new Parser("data\\actions.txt");
             Actions = aparser.ParseActions();
 
-            DebugMode();
+            GoalMode();
+            //DebugMode();
 		}
 
+        /*
+            Find all failing Predicate 
+            Foreach failing predicate: 
+                Find all Actions that can change the value of that Predicate to the desired value
+            Get all Pre-reqs for These dependent actions               
+         */
         static void GoalMode()
         {
-            SObject state = World;
+            var goal = Actions["goal"];
+
+            var p = new SObject[]
+            {
+                World["player"],
+                World["petitioner"]
+            };
+
+            Expression failReason = null;
+            while (!goal.CanApply(p, World, out failReason))
+            {
+                
+                Console.WriteLine(failReason);
+            }
+
+            Console.WriteLine("Found solution!");
         }
 
         static void DebugMode()

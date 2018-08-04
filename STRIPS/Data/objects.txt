@@ -1,13 +1,15 @@
-﻿(player
+﻿(petitioner)
+
+(player
 	(IsHungry)
 	(Name 
 		(first graham )
 		(last (henry) )
 	)
 	(at home)
-	(has Money)
+	(has energy)
 	(has car)
-	(type human)
+	(is human)
 )
 
 
@@ -15,22 +17,20 @@
 
 (store 
 	(adjacent road)
-	(type location)
+	(is location)
 )
 
 (road 
 	(adjacent store)
-	(type location)
+	(is location)
 )
 
 (home 
 	(adjacent road)
-	(type location)
+	(is location)
 )
 
-(food (at store))
-
-(test a)
-
-
-
+(meat
+	(at store)
+	(is organic)
+)
