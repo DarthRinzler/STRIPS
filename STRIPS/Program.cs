@@ -41,8 +41,9 @@ namespace STRIPS
             };
 
             Expression failReason = null;
-            while (!goal.CanApply(p, World, out failReason))
+            while (true)
             {
+                var fp = goal.
                 
                 Console.WriteLine(failReason);
             }
