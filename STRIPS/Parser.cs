@@ -109,7 +109,7 @@ namespace STRIPS
             Consume(TokenType.Pre);
             if (_tok.PeekToken().Type != TokenType.RParen)
             {
-                pre = ParseExpression(parameters);
+                pre = ParseConjuction(parameters);
             }
             Consume(TokenType.RParen);
 
@@ -119,7 +119,7 @@ namespace STRIPS
             Expression post = null;
             if (_tok.PeekToken().Type != TokenType.RParen)
             {
-                post = ParseExpression(parameters);
+                post = ParseConjuction(parameters);
             }
             Consume(TokenType.RParen);
             Consume(TokenType.RParen);
@@ -140,6 +140,21 @@ namespace STRIPS
             return ret;
         }
 
+        private Expression ParseConjuction(List<string> parameters)
+        {
+
+            var predicates = new List<Expression>();    
+            while(_tok.PeekToken().Type != TokenType.RParen)
+            {
+                Expression pred = ParsePredicate(parameters);
+                predicates.Add(pred);
+            }
+
+            ConjuctionExpression ret = new ConjuctionExpression(predicates.ToArray());
+            return ret;
+        }
+
+        /*
         private Expression ParseExpression(List<string> parameters)
         {
             Expression ret = null;
@@ -157,19 +172,7 @@ namespace STRIPS
                     andExpressions.Add(expr);
                 }
 
-                ret = new AndExpression(andExpressions.ToArray());
-            }
-            else if (next == TokenType.Or)
-            {
-                Consume(TokenType.Or);
-                List<Expression> orExpressions = new List<Expression>();
-                while(_tok.PeekToken().Type != TokenType.RParen)
-                {
-                    Expression expr = ParseExpression(parameters);
-                    orExpressions.Add(expr);
-                }
-
-                ret = new OrExpression(orExpressions.ToArray());
+                ret = new ConjuctionExpression(andExpressions.ToArray());
             }
             else if (next == TokenType.Not)
             {
@@ -186,19 +189,38 @@ namespace STRIPS
 
             return ret;
         }
+        */
 
         private Expression ParsePredicate(List<string> parameters)
         {
             List<KV> paramIdxs = new List<KV>();
-            while (_tok.PeekToken().Type != TokenType.RParen)
-            {
-                var name = Consume(TokenType.Id).Value;
-                int idx = parameters.IndexOf(name);
-                var param = new KV() { Key = name, Idx = idx };
-                paramIdxs.Add(param);
-            }
+            Consume(TokenType.LParen);
 
-            return new ReferenceExpression(paramIdxs);
+            if (_tok.PeekToken().Type == TokenType.Not)
+            {
+                Consume(TokenType.Not);
+                var expr = ParsePredicate(parameters);
+                Consume(TokenType.RParen);
+                return new NotExpression(expr);
+            }
+            else
+            {
+                while (_tok.PeekToken().Type != TokenType.RParen)
+                {
+                    var name = Consume(TokenType.Id).Value;
+                    int idx = parameters.IndexOf(name);
+                    if (idx == -1 && paramIdxs.Count == 0)
+                    {
+                        throw new Exception("Undefined variable reference: " + name);
+                    }
+
+                    var param = new KV() { Key = name, Idx = idx };
+                    paramIdxs.Add(param);
+                }
+
+                Consume(TokenType.RParen);
+                return new ReferenceExpression(paramIdxs);
+            }
         }
 
         private Token Consume(TokenType t)
@@ -303,7 +325,7 @@ namespace STRIPS
 
 	enum TokenType
 	{
-		LParen, RParen, Id, LBracket, RBracket, Pre, Post, And, Or, Not
+		LParen, RParen, Id, LBracket, RBracket, Pre, Post, Not
 	}
 
 	class Token
@@ -316,8 +338,6 @@ namespace STRIPS
 			Value = value.ToLowerInvariant();
             if (Value == "(") Type = TokenType.LParen;
             else if (Value == ")") Type = TokenType.RParen;
-            else if (Value == "and") Type = TokenType.And;
-            else if (Value == "or") Type = TokenType.Or;
             else if (Value == "not") Type = TokenType.Not;
             else if (Value == "pre") Type = TokenType.Pre;
             else if (Value == "post") Type = TokenType.Post;

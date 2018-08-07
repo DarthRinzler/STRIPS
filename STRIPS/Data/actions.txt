@@ -1,4 +1,14 @@
-﻿
+﻿(Eat (obj food)
+	(Pre
+		(food is edible)
+		(obj has food)	
+	)
+	(Post
+		(not (obj has food))	
+		(not (obj IsHungry))
+	)
+)
+
 (Work (person)
 	(pre
 		(person has energy)
@@ -6,19 +16,6 @@
 	(post
 		(person has money)
 		(not (person has energy))
-	)
-)
-
-(Eat (obj, food)
-	(Pre
-		(food is edible)
-		(obj has food)	
-	)
-	(Post
-		(And
-			(not (obj has food))	
-			(not (obj IsHungry))
-		)
 	)
 )
 
@@ -38,48 +35,39 @@
 
 (Move (obj src dest)
 	(Pre 
-		(and 
-			(src is location)
-			(dest is location)
-			(obj at src)
-			(src adjacent dest)
-		)
+		(src is location)
+		(dest is location)
+		(obj at src)
+		(src adjacent dest)
 	)
 	(Post
-		(and
-			(obj at dest)
-			(not (obj at src))
-		)
+		(obj at dest)
+		(not (obj at src))
 	)
 )
 
 (Buy (buyer seller obj loc)
 	(Pre
-		(and
-			(buyer at loc)
-			(seller at loc)
-			(buyer has money)
-			(seller has obj)	
-		)
+		(buyer at loc)
+		(seller at loc)
+		(buyer has money)
+		(seller has obj)	
 	)
 	(Post
-		(and
-			(not (buyer has money))
-			(not (seller has obj))
-			(buyer has obj)
-			(seller has money)
-		)
+		(not (buyer has money))
+		(not (seller has obj))
+		(buyer has obj)
+		(seller has money)
 	)
 )
 
+
 (Goal (player petitioner)
 	(Pre
-		(And
-			(player name first graham)
-			(player is human)
-			(player at home)	
-			(not (player isHungry))
-		)	
+		(player name first graham)
+		(player is human)
+		(player at home)	
+		(not (player isHungry))
 	)
 	(Post
 		(petitioner IsSatisfied)	

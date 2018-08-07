@@ -20,8 +20,8 @@ namespace STRIPS
             var aparser = new Parser("data\\actions.txt");
             Actions = aparser.ParseActions();
 
-            GoalMode();
-            //DebugMode();
+            //GoalMode();
+            DebugMode();
 		}
 
         /*
@@ -43,9 +43,7 @@ namespace STRIPS
             Expression failReason = null;
             while (true)
             {
-                var fp = goal.
                 
-                Console.WriteLine(failReason);
             }
 
             Console.WriteLine("Found solution!");
@@ -55,8 +53,8 @@ namespace STRIPS
         {
             while(true)
             {
-                Console.WriteLine("Enter Command");
-                var input = Console.ReadLine().Split(' ');
+                Console.WriteLine("\nEnter Command");
+                var input = Console.ReadLine().ToLower().Split(' ');
 
                 // If Action
                 SAction action = null;
@@ -82,6 +80,23 @@ namespace STRIPS
                     var str = parameters.Select(p => p.ToString());
                     var newState = String.Join("\r\n", str);
                     Console.WriteLine(newState);
+                }
+                // If Object
+                else if (World.Properties.ContainsKey(input[0]))
+                {
+                    var cur = World[input[0]];
+
+                    for(int i=1; i<input.Length; i++)
+                    {
+                        var key = input[i];
+                        if (cur.Properties.ContainsKey(key))
+                        {
+                            cur = cur[key];
+                        }
+                        else break;
+                    }
+
+                    Console.WriteLine(cur);
                 }
             }
         }

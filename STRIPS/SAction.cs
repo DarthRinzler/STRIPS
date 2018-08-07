@@ -24,12 +24,6 @@ namespace STRIPS
 			return Precondition.Evaluate(parameters, world, out failExpr);
 		}
 
-        public bool GetAllFailExprs(SObject[] parameters, SObject world, out List<Expression> failExprs)
-        {
-            failExprs = null;
-            return Precondition.GetAllFailExprs(parameters, world, failExprs);
-        }
-
 		public void Apply(SObject[] parameters, SObject world)
 		{
 			Effect.Apply(parameters, world, false);

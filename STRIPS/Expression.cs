@@ -13,11 +13,11 @@ namespace STRIPS
         public abstract string Print(SObject[] parameters);
 	}
 
-	public class AndExpression : Expression
+	public class ConjuctionExpression : Expression
 	{
         public Expression[] Expressions;
 
-		public AndExpression(params Expression[] exprs)
+		public ConjuctionExpression(params Expression[] exprs)
 		{
             Expressions = exprs;
 		}
@@ -47,6 +47,11 @@ namespace STRIPS
         public override string Print(SObject[] parameters)
         {
             return "AND(\r\n"+Expressions.Select(e => e.Print(parameters)).Aggregate((a, e) => a + "\r\n" + e)+"\r\n)";
+        }
+
+        public override string ToString()
+        {
+            return String.Join(" & ", Expressions.Select(e => e.ToString()));
         }
     }
 
@@ -78,6 +83,11 @@ namespace STRIPS
         public override string Print(SObject[] parameters)
         {
             return "NOT("+Expr.Print(parameters)+")";
+        }
+
+        public override string ToString()
+        {
+            return "!(" + Expr.ToString() + ")";
         }
     }
 
@@ -217,6 +227,11 @@ namespace STRIPS
                 string keyName = null;
                 if (p.Idx >= 0)
                 {
+                    if (p.Idx >= runtimeParams.Count())
+                    {
+                        failExpr = this;
+                        return false;
+                    }
                     keyName = runtimeParams[p.Idx].Name;
                 }
                 else

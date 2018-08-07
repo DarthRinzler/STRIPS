@@ -12,6 +12,10 @@
 	(is human)
 )
 
+(Clerk
+	(at store)
+	(has meat)
+)
 
 (location)
 
