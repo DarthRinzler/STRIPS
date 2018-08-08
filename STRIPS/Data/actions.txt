@@ -6,6 +6,7 @@
 	(Post
 		(not (obj has food))	
 		(not (obj IsHungry))
+		(obj has energy)
 	)
 )
 
@@ -19,9 +20,10 @@
 	)
 )
 
-(Cook (obj)
+(Cook (person obj)
 	(Pre
 		(obj is organic)	
+		(person at home)
 	)
 	(Post
 		(obj is edible)	
@@ -74,3 +76,24 @@
 	)
 )
 
+(Convert (obj is a b)
+	(pre
+		(obj is	a)
+	)
+	(post
+		(not (obj is a))
+		(obj is b)
+	)
+)	
+
+(UpdateProperty (obj prop a b)
+	(pre
+		(obj prop a)	
+	)
+	(post
+		(not (obj prop a))
+		(obj is b)
+	)
+)
+
+ 

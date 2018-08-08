@@ -24,7 +24,12 @@
 	(is location)
 )
 
+(park
+	(is location)
+)
+
 (road 
+	(adjacent park)
 	(adjacent store)
 	(is location)
 )

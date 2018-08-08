@@ -9,7 +9,7 @@ namespace STRIPS
 {
 	class Program
 	{
-        static Dictionary<string, SAction> Actions;
+        static Dictionary<string, ActionDef> Actions;
         static SObject World;
 
 		static void Main(string[] args)
@@ -20,8 +20,8 @@ namespace STRIPS
             var aparser = new Parser("data\\actions.txt");
             Actions = aparser.ParseActions();
 
-            //GoalMode();
-            DebugMode();
+            GoalMode();
+            //DebugMode();
 		}
 
         /*
@@ -43,7 +43,11 @@ namespace STRIPS
             Expression failReason = null;
             while (true)
             {
-                
+                var c = Actions["updateproperty"].GetActionInstances(World);
+                foreach (var a in c)
+                {
+                    Console.WriteLine(a);
+                }
             }
 
             Console.WriteLine("Found solution!");
@@ -57,7 +61,7 @@ namespace STRIPS
                 var input = Console.ReadLine().ToLower().Split(' ');
 
                 // If Action
-                SAction action = null;
+                ActionDef action = null;
                 if (Actions.TryGetValue(input[0], out action))
                 {
                     SObject[] parameters = input

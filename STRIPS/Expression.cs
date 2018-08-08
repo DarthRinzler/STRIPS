@@ -13,11 +13,11 @@ namespace STRIPS
         public abstract string Print(SObject[] parameters);
 	}
 
-	public class ConjuctionExpression : Expression
+	public class Conjunction : Expression
 	{
         public Expression[] Expressions;
 
-		public ConjuctionExpression(params Expression[] exprs)
+		public Conjunction(params Expression[] exprs)
 		{
             Expressions = exprs;
 		}
@@ -136,7 +136,7 @@ namespace STRIPS
 	{
 		public string ObjectName { get; }
 		public string PropertyName { get; }
-        private int ObjectIdx { get; set; }
+        public int ObjectIdx { get; set; }
 
 		public BooleanPredicateExpression(string objectName, string propertyName, int objectIdx)
 		{
@@ -170,22 +170,24 @@ namespace STRIPS
         }
     }
 
-    public class ReferenceExpression : Expression
+    public class Predicate : Expression
     {
-        private List<KV> _params;
+        public List<KV> Params { get; private set; }
+        public bool HasReferences { get; private set; }
 
-        public ReferenceExpression(List<KV> parameters)
+        public Predicate(List<KV> parameters)
         {
-            _params = parameters;
+            Params = parameters;
+            HasReferences = parameters.Skip(1).Any(p => p.Idx >= 0);
         }
 
         public override void Apply(SObject[] runtimeParams, SObject world, bool invert)
         {
             SObject key = world;
 
-            for (int i=0; i<_params.Count; i++)
+            for (int i=0; i<Params.Count; i++)
             {
-                var p = _params[i];
+                var p = Params[i];
                 string keyName = null;
                 if (p.Idx >= 0)
                 {
@@ -206,7 +208,7 @@ namespace STRIPS
                 }
                 else
                 {
-                    if (key.Properties.TryGetValue(keyName, out val) && i == _params.Count -1)
+                    if (key.Properties.TryGetValue(keyName, out val) && i == Params.Count -1)
                     {
                         key.Properties.Remove(keyName);
                         return;
@@ -221,9 +223,9 @@ namespace STRIPS
             failExpr = null;
             SObject key = world;
 
-            for (int i=0; i<_params.Count; i++)
+            for (int i=0; i<Params.Count; i++)
             {
-                var p = _params[i];
+                var p = Params[i];
                 string keyName = null;
                 if (p.Idx >= 0)
                 {
@@ -251,16 +253,39 @@ namespace STRIPS
 
         public override string Print(SObject[] parameters)
         {
-            return _params
+            return Params
                 .Select(p => p.Idx >= 0 ? parameters[p.Idx].Name : p.Key)
                 .Aggregate((a, e) => a + " " + e);
         }
 
         public override string ToString()
         {
-            return _params.Select(p => p.Key).Aggregate((a, e) => a + " " + e);
+            return Params.Select(p => p.Key).Aggregate((a, e) => a + " " + e);
         }
     }
+
+    public class PropertyIndex
+    {
+        public SObject Index { get; private set; }
+
+        public PropertyIndex()
+        {
+            Index = new SObject("Index");
+        }
+
+        public void AddMonitor(string[] properties)
+        {
+            SObject cur = Index;
+            foreach (var p in properties)
+            {
+                if (cur.Properties.ContainsKey(p))
+                {
+
+                }
+            }
+        }
+    }
+
 
     public class KV
     {

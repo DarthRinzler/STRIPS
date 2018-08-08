@@ -6,17 +6,25 @@ using System.Threading.Tasks;
 
 namespace STRIPS
 {
-	public class SAction
+	public class ActionDef
 	{
 		public string Name { get; private set; }
-		public Expression Precondition { get; private set; }
-		public Expression Effect { get; private set; }
+        public List<string> Parameters { get; private set; }
+		public Conjunction Precondition { get; private set; }
+		public Conjunction Effect { get; private set; }
 
-		public SAction(string name, Expression precondition, Expression effect)
+		public ActionDef(string name, List<string> parameters, Conjunction precondition, Conjunction effect)
 		{
 			Name = name;
-			Precondition = precondition;
-			Effect = effect;
+            Parameters = parameters;
+            Precondition = precondition;
+            Effect = effect;
+		}
+
+		public bool CanApply(SObject[] parameters, SObject world)
+		{
+            Expression e = null;
+			return Precondition.Evaluate(parameters, world, out e);
 		}
 
 		public bool CanApply(SObject[] parameters, SObject world, out Expression failExpr)
@@ -28,5 +36,44 @@ namespace STRIPS
 		{
 			Effect.Apply(parameters, world, false);
 		}
+
+        public IEnumerable<SObject[]> GetActionInstances(SObject world)
+        {
+            var p = new SObject[Parameters.Count];
+            return Combinations(p, world, 0)
+                .Where(c => CanApply(c, world));
+        }
+
+        public IEnumerable<SObject[]> Combinations(SObject[] parameters, SObject world, int idx)
+        {
+            if (idx == parameters.Length)
+            {
+                yield return parameters;
+            }
+            else
+            {
+                foreach (var obj in world.Properties.Values)
+                {
+                    parameters[idx] = obj;
+                    var ret = Combinations(parameters, world, idx + 1);
+                    foreach (var r in ret)
+                    {
+                        yield return r;
+                    }
+                }
+            }
+        }
 	}
+
+    public class ActionInst
+    {
+        public ActionDef Definition { get; set; }
+        public SObject[] Parameters { get; set; }
+
+        public ActionInst(ActionDef def, SObject[] parameters)
+        {
+            Definition = def;
+            Parameters = parameters;
+        }
+    }
 }

@@ -30,9 +30,9 @@ namespace STRIPS
             return ret;
         }
 
-        public Dictionary<string, SAction> ParseActions()
+        public Dictionary<string, ActionDef> ParseActions()
         {
-            var ret = new List<SAction>();
+            var ret = new List<ActionDef>();
             while(_tok.PeekToken() != null)
             {
                 ret.Add(ParseAction()); 
@@ -94,7 +94,7 @@ namespace STRIPS
             Consume(TokenType.RParen);
         }
 
-        private SAction ParseAction()
+        private ActionDef ParseAction()
         {
             // Action Name
             Consume(TokenType.LParen);
@@ -104,7 +104,7 @@ namespace STRIPS
             List<string> parameters = ParseSignature();
 
             // Pre Expression
-            Expression pre = null;
+            Conjunction pre = null;
             Consume(TokenType.LParen);
             Consume(TokenType.Pre);
             if (_tok.PeekToken().Type != TokenType.RParen)
@@ -116,7 +116,7 @@ namespace STRIPS
             // Post Expression
             Consume(TokenType.LParen);
             Consume(TokenType.Post);
-            Expression post = null;
+            Conjunction post = null;
             if (_tok.PeekToken().Type != TokenType.RParen)
             {
                 post = ParseConjuction(parameters);
@@ -124,7 +124,7 @@ namespace STRIPS
             Consume(TokenType.RParen);
             Consume(TokenType.RParen);
 
-            return new SAction(name, pre, post);
+            return new ActionDef(name, parameters, pre, post);
         }
 
         private List<string> ParseSignature()
@@ -140,7 +140,7 @@ namespace STRIPS
             return ret;
         }
 
-        private Expression ParseConjuction(List<string> parameters)
+        private Conjunction ParseConjuction(List<string> parameters)
         {
 
             var predicates = new List<Expression>();    
@@ -150,7 +150,7 @@ namespace STRIPS
                 predicates.Add(pred);
             }
 
-            ConjuctionExpression ret = new ConjuctionExpression(predicates.ToArray());
+            Conjunction ret = new Conjunction(predicates.ToArray());
             return ret;
         }
 
@@ -219,7 +219,7 @@ namespace STRIPS
                 }
 
                 Consume(TokenType.RParen);
-                return new ReferenceExpression(paramIdxs);
+                return new Predicate(paramIdxs);
             }
         }
 

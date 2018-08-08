@@ -10,18 +10,7 @@ namespace STRIPS
 	{
 		public string Name { get; set; }
 		public Dictionary<string, SObject> Properties { get; }
-
-        public SObject this[string key]
-        {
-            get
-            {
-                return Properties[key];
-            }
-            set
-            {
-                Properties[key] = value;
-            }
-        }
+        public static Dictionary<string, List<SObject>> Refs = new Dictionary<string, List<SObject>>();
 
         public SObject(SObject other)
         {
@@ -37,6 +26,23 @@ namespace STRIPS
             Properties = new Dictionary<string, SObject>();
 			Name = name;
 		}
+
+        public SObject this[string key]
+        {
+            get
+            {
+                return Properties[key];
+            }
+            set
+            {
+                Properties[key] = value;
+                if (!Refs.ContainsKey(key))
+                {
+                    Refs[key] = new List<SObject>();
+                }
+                Refs[key].Add(this);
+            }
+        }
 
         public override string ToString()
         {
