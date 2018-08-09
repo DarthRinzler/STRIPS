@@ -43,7 +43,7 @@ namespace STRIPS
             Expression failReason = null;
             while (true)
             {
-                var c = Actions["updateproperty"].GetActionInstances(World);
+                var c = Actions["move"].GetActionInstances(World);
                 foreach (var a in c)
                 {
                     Console.WriteLine(a);

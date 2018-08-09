@@ -54,6 +54,21 @@ namespace STRIPS
             {
                 foreach (var obj in world.Properties.Values)
                 {
+                    foreach (var expr in Precondition.Expressions)
+                    {
+                        if (expr is Predicate)
+                        {
+                            var predicate = expr as Predicate;
+
+                            var t = predicate.Params.Where(p => p.Idx == idx);
+                            Console.WriteLine(t);
+                        }
+                        else if (expr is NotExpression)
+                        {
+
+                        }
+                    }
+
                     parameters[idx] = obj;
                     var ret = Combinations(parameters, world, idx + 1);
                     foreach (var r in ret)
