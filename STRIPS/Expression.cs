@@ -57,9 +57,9 @@ namespace STRIPS
 
 	public class NotExpression : Expression
 	{
-		public Expression Expr { get; set; }
+		public Predicate Expr { get; set; }
 
-		public NotExpression(Expression expr)
+		public NotExpression(Predicate expr)
 		{
 			Expr = expr;
 		}
@@ -178,7 +178,7 @@ namespace STRIPS
         public Predicate(List<KV> parameters)
         {
             Params = parameters;
-            HasReferences = parameters.Skip(1).Any(p => p.Idx >= 0);
+            HasReferences = parameters.Skip(1).Any(p => p.ParamIdx >= 0);
         }
 
         public override void Apply(SObject[] runtimeParams, SObject world, bool invert)
@@ -189,9 +189,9 @@ namespace STRIPS
             {
                 var p = Params[i];
                 string keyName = null;
-                if (p.Idx >= 0)
+                if (p.ParamIdx >= 0)
                 {
-                    keyName = runtimeParams[p.Idx].Name;
+                    keyName = runtimeParams[p.ParamIdx].Name;
                 }
                 else
                 {
@@ -227,14 +227,14 @@ namespace STRIPS
             {
                 var p = Params[i];
                 string keyName = null;
-                if (p.Idx >= 0)
+                if (p.ParamIdx >= 0)
                 {
-                    if (p.Idx >= runtimeParams.Count())
+                    if (p.ParamIdx >= runtimeParams.Count())
                     {
                         failExpr = this;
                         return false;
                     }
-                    keyName = runtimeParams[p.Idx].Name;
+                    keyName = runtimeParams[p.ParamIdx].Name;
                 }
                 else
                 {
@@ -254,7 +254,7 @@ namespace STRIPS
         public override string Print(SObject[] parameters)
         {
             return Params
-                .Select(p => p.Idx >= 0 ? parameters[p.Idx].Name : p.Key)
+                .Select(p => p.ParamIdx >= 0 ? parameters[p.ParamIdx].Name : p.Key)
                 .Aggregate((a, e) => a + " " + e);
         }
 
@@ -290,7 +290,7 @@ namespace STRIPS
     public class KV
     {
         public string Key { get; set; }
-        public int Idx { get; set; }
+        public int ParamIdx { get; set; }
     }
 
     public class KeyValuePredicateExpression : Expression

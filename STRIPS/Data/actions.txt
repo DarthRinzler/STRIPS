@@ -1,4 +1,16 @@
-﻿(Eat (obj food)
+﻿(Test (a b c d)
+	(Pre
+		(a is e)	
+		(c a e)
+		(d is a)
+	)
+	(Post
+		(a is f)
+	)
+)
+
+
+(Eat (obj food)
 	(Pre
 		(food is edible)
 		(obj has food)	
@@ -92,7 +104,7 @@
 	)
 	(post
 		(not (obj prop a))
-		(obj is b)
+		(obj prop b)
 	)
 )
 

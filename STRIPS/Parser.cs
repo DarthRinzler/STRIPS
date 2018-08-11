@@ -199,7 +199,7 @@ namespace STRIPS
             if (_tok.PeekToken().Type == TokenType.Not)
             {
                 Consume(TokenType.Not);
-                var expr = ParsePredicate(parameters);
+                var expr = ParsePredicate(parameters) as Predicate;
                 Consume(TokenType.RParen);
                 return new NotExpression(expr);
             }
@@ -214,7 +214,7 @@ namespace STRIPS
                         throw new Exception("Undefined variable reference: " + name);
                     }
 
-                    var param = new KV() { Key = name, Idx = idx };
+                    var param = new KV() { Key = name, ParamIdx = idx };
                     paramIdxs.Add(param);
                 }
 

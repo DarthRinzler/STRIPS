@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace STRIPS
 {
-	public class SObject
+	public class SObject 
 	{
 		public string Name { get; set; }
 		public Dictionary<string, SObject> Properties { get; }
