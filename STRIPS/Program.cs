@@ -32,19 +32,12 @@ namespace STRIPS
          */
         static void GoalMode()
         {
-            var goal = Actions["goal"];
-
-            var p = new SObject[]
-            {
-                World["player"],
-                World["petitioner"]
-            };
-
-            Expression failReason = null;
             while (true)
             {
-                var c = Actions["move"].GetActionInstances(World);
-                foreach (var a in c)
+                Console.ReadLine();
+                var allPossibleActions = Actions.Values.SelectMany(a => a.GetActionInstances(World)).ToArray();
+
+                foreach (var a in allPossibleActions)
                 {
                     Console.WriteLine(a);
                 }
@@ -64,10 +57,24 @@ namespace STRIPS
                 ActionDef action = null;
                 if (Actions.TryGetValue(input[0], out action))
                 {
+                    var notFound = input.Skip(1).FirstOrDefault(p => !World.ContainsKey(p));
+                    if (notFound != null)
+                    {
+                        Console.WriteLine("ERROR: Unable to find object: {0}", notFound);
+                        continue;
+                    }
+
                     SObject[] parameters = input
                         .Skip(1)
                         .Select(i => World[i])
                         .ToArray();
+
+                    if (!parameters.Any())
+                    {
+                        var actions = Actions[input[0]].GetActionInstances(World);
+                        foreach (var a in actions) Console.WriteLine(a);
+                        continue;
+                    }
 
                     Expression failExpr = null;
                     if (action.CanApply(parameters, World, out failExpr))
@@ -86,18 +93,18 @@ namespace STRIPS
                     Console.WriteLine(newState);
                 }
                 // If Object
-                else if (World.Properties.ContainsKey(input[0]))
+                else if (World.ContainsKey(input[0]))
                 {
                     var cur = World[input[0]];
 
                     for(int i=1; i<input.Length; i++)
                     {
                         var key = input[i];
-                        if (cur.Properties.ContainsKey(key))
+                        if (cur.ContainsKey(key))
                         {
                             cur = cur[key];
                         }
-                        else break;
+                        else Console.WriteLine("False");
                     }
 
                     Console.WriteLine(cur);

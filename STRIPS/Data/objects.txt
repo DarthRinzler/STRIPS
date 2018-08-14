@@ -1,7 +1,8 @@
 ﻿(petitioner)
 
 (player
-	(IsHungry)
+	(is hungry)
+	(is movable)
 	(Name 
 		(first graham )
 		(last (henry) )
@@ -15,12 +16,12 @@
 (Clerk
 	(at store)
 	(has meat)
+	(is movable)
 )
 
 (location)
 
 (store 
-	(adjacent road)
 	(is location)
 )
 
@@ -29,7 +30,6 @@
 )
 
 (road 
-	(adjacent park)
 	(adjacent store)
 	(is location)
 )

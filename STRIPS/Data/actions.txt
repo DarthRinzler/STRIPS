@@ -12,12 +12,12 @@
 
 (Eat (obj food)
 	(Pre
-		(food is edible)
 		(obj has food)	
+		(food is edible)
 	)
 	(Post
 		(not (obj has food))	
-		(not (obj IsHungry))
+		(not (obj is hungry))
 		(obj has energy)
 	)
 )
@@ -34,24 +34,28 @@
 
 (Cook (person obj)
 	(Pre
-		(obj is organic)	
 		(person at home)
+		(obj is organic)	
 	)
 	(Post
 		(obj is edible)	
 	)
 )
 
-(InferAdjacency (a b)
-	(Pre (a adjacent b))
-	(Post (b adjacent a))
+(Infer (a b)
+	(Pre 
+		(not (a adjacent b))
+		(b adjacent a)
+	)
+	(Post (a adjacent b))
 )
 
 (Move (obj src dest)
 	(Pre 
+		(obj is movable)
+		(obj at src)
 		(src is location)
 		(dest is location)
-		(obj at src)
 		(src adjacent dest)
 	)
 	(Post
@@ -63,8 +67,8 @@
 (Buy (buyer seller obj loc)
 	(Pre
 		(buyer at loc)
-		(seller at loc)
 		(buyer has money)
+		(seller at loc)
 		(seller has obj)	
 	)
 	(Post
@@ -74,38 +78,3 @@
 		(seller has money)
 	)
 )
-
-
-(Goal (player petitioner)
-	(Pre
-		(player name first graham)
-		(player is human)
-		(player at home)	
-		(not (player isHungry))
-	)
-	(Post
-		(petitioner IsSatisfied)	
-	)
-)
-
-(Convert (obj is a b)
-	(pre
-		(obj is	a)
-	)
-	(post
-		(not (obj is a))
-		(obj is b)
-	)
-)	
-
-(UpdateProperty (obj prop a b)
-	(pre
-		(obj prop a)	
-	)
-	(post
-		(not (obj prop a))
-		(obj prop b)
-	)
-)
-
- 

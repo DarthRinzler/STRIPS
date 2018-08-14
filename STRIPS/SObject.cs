@@ -10,7 +10,7 @@ namespace STRIPS
 	{
 		public string Name { get; set; }
 		public Dictionary<string, SObject> Properties { get; }
-        public static Dictionary<string, List<SObject>> Refs = new Dictionary<string, List<SObject>>();
+        public static SObject Refs = new SObject("references");
 
         public SObject(SObject other)
         {
@@ -36,11 +36,6 @@ namespace STRIPS
             set
             {
                 Properties[key] = value;
-                if (!Refs.ContainsKey(key))
-                {
-                    Refs[key] = new List<SObject>();
-                }
-                Refs[key].Add(this);
             }
         }
 
@@ -57,7 +52,21 @@ namespace STRIPS
                 return String.Format("{0}:{1}", Name, pvalues);
             }
             else return String.Format("{0}", Name);
+        }
 
+        public bool ContainsKey(string key)
+        {
+            return Properties.ContainsKey(key);
+        }
+
+        public bool TryGetValue(string key, out SObject value)
+        {
+            return Properties.TryGetValue(key, out value);
+        }
+
+        public bool Remove(string key)
+        {
+            return Properties.Remove(key);
         }
 
         public bool Satisfies(SObject goal)

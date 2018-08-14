@@ -37,10 +37,10 @@ namespace STRIPS
 			Effect.Apply(parameters, world, false);
 		}
 
-        public IList<SObject[]> GetActionInstances(SObject world)
+        public IList<ActionInst> GetActionInstances(SObject world)
         {
             var p = new SObject[Parameters.Count];
-            var candidates = new List<SObject[]>();
+            var candidates = new List<ActionInst>();
             Combinations(p, world, 0, candidates);
             return candidates;
         }
@@ -50,32 +50,35 @@ namespace STRIPS
          *      foreach predicate d in PRE that contains p:
          *          if (d.idx == 0) check right
          *
-         * NEED TO FILTER OUT INVALID FIRST PARAMETERS:w
+         * NEED TO FILTER OUT INVALID FIRST PARAMETERS
          * 
          */
-        string[] padding = new string[] { "", "\t", "\t\t" };
-        public void Combinations(SObject[] parameters, SObject world, int candidateParamIdx, List<SObject[]> candidates)
+        string[] padding = new string[] { "", "\t", "\t\t", "\t\t\t", "\t\t\t\t" };
+        public void Combinations(SObject[] parameters, SObject world, int candidateParamIdx, List<ActionInst> candidates)
         {
             foreach (SObject candidateParam in world.Properties.Values)
             {
                 // Skip duplicate parameters
                 for (int i = 0; i < candidateParamIdx; i++) if (parameters[i].Name == candidateParam.Name) goto cont;
 
-                Console.WriteLine("{0}{1}", padding[candidateParamIdx], candidateParam.Name);
+                parameters[candidateParamIdx] = candidateParam;
+
+                //Console.Write("\n{0}{1}:", padding[candidateParamIdx], candidateParam.Name);
                 // Filter out parameters that are invalid
-                if (!IsCandidateParam(parameters, candidateParam, candidateParamIdx))
+                if (!IsCandidateParam(parameters, candidateParamIdx, world))
                 {
+                    //Console.WriteLine("no");
                     continue;
                 }
-
-                parameters[candidateParamIdx] = candidateParam;
 
                 // If all parameters are valid candidates
                 if (candidateParamIdx == parameters.Length - 1)
                 {
                     var parameterListCandidate = new SObject[parameters.Length];
                     Array.Copy(parameters, parameterListCandidate, parameters.Length);
-                    candidates.Add(parameterListCandidate);
+                    ActionInst inst = new ActionInst(this, parameterListCandidate);
+                    candidates.Add(inst);
+                    //Console.WriteLine("yes");
                 }
                 // Else try out next parameter candidate
                 else
@@ -87,14 +90,14 @@ namespace STRIPS
             }
         }
 
-        public bool IsCandidateParam(SObject[] parameters, SObject candidateParam, int candidateParamIdx)
+        public bool IsCandidateParam(SObject[] parameters, int candidateParamIdx, SObject world)
         {
             foreach (Expression expr in Precondition.Expressions)
             {
                 if (expr is Predicate)
                 {
                     var predicate = expr as Predicate;
-                    if (!CandidateValid(parameters, predicate, candidateParam, candidateParamIdx))
+                    if (!CandidateValid(parameters, predicate, candidateParamIdx, world, false))
                     {
                         return false;
                     }
@@ -102,7 +105,7 @@ namespace STRIPS
                 else if (expr is NotExpression)
                 {
                     var notExpr = expr as NotExpression;
-                    if (CandidateValid(parameters, notExpr.Expr, candidateParam, candidateParamIdx))
+                    if (!CandidateValid(parameters, notExpr.Expr, candidateParamIdx, world, true))
                     {
                         return false;
                     }
@@ -112,86 +115,60 @@ namespace STRIPS
             return true;
         }
 
-        public bool CandidateValid(SObject[] parameters, Predicate predicate, SObject candidateParam, int candidateParamIdx)
+        public bool CandidateValid(SObject[] parameters, Predicate predicate, int candidateParamIdx, SObject world, bool invert)
         {
             var refParams = predicate.Params;
+            SObject last = null;
+            SObject cur = null;
 
             // Filter out predicates not referencing this candidateParam
             for (int candidateRefIdx = 0; candidateRefIdx < refParams.Count; candidateRefIdx++)
             {
-                // If reference to candidateParam is found in predicate
-                if (refParams[candidateRefIdx].ParamIdx == candidateParamIdx)
+                KV key = refParams[candidateRefIdx];
+
+                // If reference is literal 
+                if (key.ParamIdx < 0)
                 {
-                    // First Ref
-                    if (candidateRefIdx == 0)
+                    if (last != null)
                     {
-                        // If second parameter is chosen, filter on its value
-                        if (candidateParamIdx > 0 && parameters.Length > 1)
+                        if (!last.TryGetValue(key.Name, out cur))
                         {
-                            var second = refParams[1];
-
-                            string secondName = second.ParamIdx < 0 ? second.Key : parameters[second.ParamIdx].Name;
-                            var matchingFirst = SObject.Refs[secondName];
-                            if (matchingFirst.All(f => f.Name != candidateParam.Name))
-                            {
-                                return false; 
-                            }
+                            return invert;
                         }
                     }
-                    // Second Ref
-                    else if (candidateRefIdx == 1)
+                    else
                     {
-                        // Filter out objects that do not reference candidate obj
-                        var objs = SObject.Refs[candidateParam.Name];
-
-                        var first = refParams[0];
-                        var firstName = first.ParamIdx < 0 ? first.Key : parameters[first.ParamIdx].Name;
-                        if (objs.All(o => o.Name != firstName))
-                        {
-                            return false;
-                        }
-
-                        // If third parameter is chose, filter on its value
-                        if (candidateParamIdx > 1 && parameters.Length > 2)
-                        {
-                            var third = refParams[2];
-
-                            string thirdName = third.ParamIdx < 0 ? third.Key : parameters[third.ParamIdx].Name;
-                            var matchindSecond = SObject.Refs[thirdName];
-                            if (matchindSecond.All(f => f.Name != candidateParam.Name))
-                            {
-                                return false;
-                            }
-                        }
+                        cur = world[key.Name];
                     }
-                    // Third Ref
-                    else if (candidateRefIdx == 2)
-                    {
-                        // Filter out objects that do not reference candidate obj
-                        var objs = SObject.Refs[candidateParam.Name];
-
-                        var second = refParams[1];
-
-                        string secondName = null;
-                        if (second.ParamIdx < 0)
-                        {
-                            secondName = second.Key;
-                        }
-                        else if (second.ParamIdx <= candidateParamIdx)
-                        {
-                            secondName = parameters[second.ParamIdx].Name;
-                        }
-
-                        if (objs.All(o => o.Name != secondName))
-                        {
-                            return false;
-                        }
-                    }
-                    break;
                 }
+                // If reference has candidate
+                else if (key.ParamIdx <= candidateParamIdx)
+                {
+                    cur = parameters[key.ParamIdx];
+                }
+                // else we cannot rule it out
+                else
+                {
+                    return true;
+                }
+
+                if (last != null)
+                {
+                    if (!last.ContainsKey(cur.Name))
+                    {
+                        return invert;
+                    }
+                }
+
+                last = cur;
             }
 
-            return true;
+            return !invert;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("{0}", this.Name);
         }
     }
 
@@ -204,6 +181,11 @@ namespace STRIPS
         {
             Definition = def;
             Parameters = parameters;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1}", Definition.Name, String.Join(" ", Parameters.Select(p => p.Name)));
         }
     }
 }

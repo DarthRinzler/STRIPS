@@ -54,7 +54,7 @@ namespace STRIPS
                 var propObj = new SObject(propertyName);
 
                 // If parent already contains name
-                if (parent.Properties.ContainsKey(name))
+                if (parent.ContainsKey(name))
                 {
                     parent[name][propertyName] = propObj;
                 }
@@ -69,7 +69,7 @@ namespace STRIPS
             else if (next != TokenType.RParen)
             {
                 // If parent already contains name
-                if (parent.Properties.ContainsKey(name))
+                if (parent.ContainsKey(name))
                 {
                     while (_tok.PeekToken().Type != TokenType.RParen)
                     {
@@ -214,7 +214,7 @@ namespace STRIPS
                         throw new Exception("Undefined variable reference: " + name);
                     }
 
-                    var param = new KV() { Key = name, ParamIdx = idx };
+                    var param = new KV() { Name = name, ParamIdx = idx };
                     paramIdxs.Add(param);
                 }
 

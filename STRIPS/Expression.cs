@@ -132,89 +132,53 @@ namespace STRIPS
         }
     }
 
-	public class BooleanPredicateExpression : Expression
-	{
-		public string ObjectName { get; }
-		public string PropertyName { get; }
-        public int ObjectIdx { get; set; }
-
-		public BooleanPredicateExpression(string objectName, string propertyName, int objectIdx)
-		{
-			ObjectName = objectName;
-			PropertyName = propertyName;
-            ObjectIdx = objectIdx;
-		}
-
-		public override bool Evaluate(SObject[] runtimeParams, SObject world, out Expression failExpr)
-		{
-            failExpr = null;
-			SObject sobj = runtimeParams[ObjectIdx];
-            if (!sobj.Properties.ContainsKey(ObjectName))
-            {
-                failExpr = this;
-                return false;
-            }
-            else return true;
-		}
-
-		public override void Apply(SObject[] parameters, SObject world, bool invert)
-		{
-			SObject sobj = parameters[ObjectIdx];
-            if (!invert) sobj.Properties[ObjectName] = null;
-            else sobj.Properties.Remove(ObjectName);
-		}
-
-        public override string Print(SObject[] parameters)
-        {
-            return parameters[ObjectIdx].Name+ "." + PropertyName;
-        }
-    }
-
     public class Predicate : Expression
     {
         public List<KV> Params { get; private set; }
-        public bool HasReferences { get; private set; }
 
         public Predicate(List<KV> parameters)
         {
             Params = parameters;
-            HasReferences = parameters.Skip(1).Any(p => p.ParamIdx >= 0);
         }
 
         public override void Apply(SObject[] runtimeParams, SObject world, bool invert)
         {
-            SObject key = world;
+            SObject cur = world;
 
             for (int i=0; i<Params.Count; i++)
             {
                 var p = Params[i];
-                string keyName = null;
+                string nextName = null;
                 if (p.ParamIdx >= 0)
                 {
-                    keyName = runtimeParams[p.ParamIdx].Name;
+                    nextName = runtimeParams[p.ParamIdx].Name;
                 }
                 else
                 {
-                    keyName = p.Key;
+                    nextName = p.Name;
                 }
 
-                SObject val = null;
+                SObject next = null;
                 if (!invert)
-                { 
-                    if (!key.Properties.TryGetValue(keyName, out val))
+                {
+                    if (!cur.TryGetValue(nextName, out next))
                     {
-                        key[keyName] = new SObject(keyName);
+                        if (!world.TryGetValue(nextName, out next))
+                        {
+                            next = new SObject(nextName);
+                        }
                     }
+                    cur[nextName] = next;
                 }
                 else
                 {
-                    if (key.Properties.TryGetValue(keyName, out val) && i == Params.Count -1)
+                    if (cur.TryGetValue(nextName, out next) && i == Params.Count -1)
                     {
-                        key.Properties.Remove(keyName);
+                        cur.Remove(nextName);
                         return;
                     }
                 }
-                key = val;
+                cur = next;
             }
         }
 
@@ -238,10 +202,10 @@ namespace STRIPS
                 }
                 else
                 {
-                    keyName = p.Key;
+                    keyName = p.Name;
                 }
 
-                if (!key.Properties.TryGetValue(keyName, out key))
+                if (!key.TryGetValue(keyName, out key))
                 {
                     failExpr = this;
                     return false;
@@ -254,13 +218,13 @@ namespace STRIPS
         public override string Print(SObject[] parameters)
         {
             return Params
-                .Select(p => p.ParamIdx >= 0 ? parameters[p.ParamIdx].Name : p.Key)
+                .Select(p => p.ParamIdx >= 0 ? parameters[p.ParamIdx].Name : p.Name)
                 .Aggregate((a, e) => a + " " + e);
         }
 
         public override string ToString()
         {
-            return Params.Select(p => p.Key).Aggregate((a, e) => a + " " + e);
+            return Params.Select(p => p.Name).Aggregate((a, e) => a + " " + e);
         }
     }
 
@@ -278,118 +242,17 @@ namespace STRIPS
             SObject cur = Index;
             foreach (var p in properties)
             {
-                if (cur.Properties.ContainsKey(p))
+                if (cur.ContainsKey(p))
                 {
 
                 }
             }
         }
     }
-
 
     public class KV
     {
-        public string Key { get; set; }
+        public string Name { get; set; }
         public int ParamIdx { get; set; }
-    }
-
-    public class KeyValuePredicateExpression : Expression
-	{
-		public string ObjectName { get; }
-		public string PropertyName { get; }
-		public string PropertyValue { get; }
-        private int ObjectIdx { get; set; }
-        private int? PropertyValueIdx { get; set; }
-
-		public KeyValuePredicateExpression(string objectName, string propertyName, string propertyValue, int objectIdx, int? propertyValueIdx = null)
-		{
-			ObjectName = objectName;
-			PropertyName = propertyName;
-			PropertyValue = propertyValue;
-            ObjectIdx = objectIdx;
-            PropertyValueIdx = propertyValueIdx;
-		}
-
-        public override bool Evaluate(SObject[] parameters, SObject world, out Expression failExpr)
-        {
-            failExpr = null;
-            SObject sobj = parameters[ObjectIdx];
-            SObject val = null;
-            bool ret = false;
-
-            if (sobj.Properties.TryGetValue(PropertyName, out val))
-            {
-                // Reference
-                if (PropertyValueIdx.HasValue)
-                {
-                    ret = val.Name == parameters[PropertyValueIdx.Value].Name;
-                    if (!ret)
-                    {
-                        failExpr = this;
-                    }
-                }
-                // Literal
-                else
-                {
-                    SObject pval = null;
-                    if (world.Properties.TryGetValue(PropertyValue, out pval))
-                    {
-                        ret = val == pval; 
-                        if (!ret)
-                        {
-                            failExpr = this;
-                        }
-                    }
-                }
-            }
-            return ret;
-        }
-
-		public override void Apply(SObject[] parameters, SObject world, bool invert)
-		{
-            SObject sobj = parameters[ObjectIdx];
-
-            // Reference
-            if (PropertyValueIdx.HasValue)
-            {
-                if (invert) 
-                {
-                    if (sobj[PropertyName].Name == parameters[PropertyValueIdx.Value].Name)
-                    {
-                        sobj.Properties.Remove(PropertyName);
-                    }
-                }
-                else
-                {
-                    sobj[PropertyName] = parameters[PropertyValueIdx.Value];
-                }
-            }
-            // Literal
-            else
-            {
-                SObject pval = null;
-                if (world.Properties.TryGetValue(PropertyValue, out pval))
-                {
-                    if (invert && sobj[PropertyName] == pval)
-                    {
-                        sobj.Properties.Remove(PropertyName);
-                    }
-                    else sobj[PropertyName] = pval;
-                }
-            }
-		}
-
-        public override string Print(SObject[] parameters)
-        {
-            var sobj = parameters[ObjectIdx];
-            string pval = PropertyValue;
-
-            if (PropertyValueIdx.HasValue)
-            {
-                pval = parameters[PropertyValueIdx.Value].Name;
-            }
-
-            return String.Format("{0}.{1} {2}", sobj.Name, PropertyName, pval);
-        }
     }
 }
