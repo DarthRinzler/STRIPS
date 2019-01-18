@@ -1,4 +1,22 @@
-﻿(Eat (obj food)
+﻿(Infer (a b)
+	(Pre 
+		(not (a adjacent b))
+		(b adjacent a)
+	)
+	(Post (a adjacent b))
+)
+
+(Reaches (a b c)
+	(Pre
+		(a adjacent b)	
+		(b adjacent c)
+	)
+	(Post
+		(a reaches c)	
+	)
+)
+
+(Eat (obj food)
 	(Pre
 		(obj has food)	
 		(food is edible)
@@ -28,14 +46,6 @@
 	(Post
 		(obj is edible)	
 	)
-)
-
-(Infer (a b)
-	(Pre 
-		(not (a adjacent b))
-		(b adjacent a)
-	)
-	(Post (a adjacent b))
 )
 
 (Move (obj src dest)

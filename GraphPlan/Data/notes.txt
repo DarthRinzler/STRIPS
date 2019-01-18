@@ -1,0 +1,44 @@
+﻿(Test (x y)
+	(Pre 
+		(x N y)	
+		(y N x)
+		(y I F)
+	)
+	(Post
+		(y I S)	
+	)
+)
+
+N P V
+-----
+A N B
+A N C
+B N A
+C N D
+D N E
+A I F
+G O T
+H I J
+
+P1
+x y
+---
+A B
+A C
+B A
+C D
+D E
+
+P2
+x y
+---
+B A
+C A
+A B
+D C
+E D
+
+P3
+y
+--
+A

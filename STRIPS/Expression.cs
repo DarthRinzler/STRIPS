@@ -236,18 +236,6 @@ namespace STRIPS
         {
             Index = new SObject("Index");
         }
-
-        public void AddMonitor(string[] properties)
-        {
-            SObject cur = Index;
-            foreach (var p in properties)
-            {
-                if (cur.ContainsKey(p))
-                {
-
-                }
-            }
-        }
     }
 
     public class KV

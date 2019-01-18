@@ -1,0 +1,12 @@
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\actions.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\objects.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.exe.config
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.exe
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.pdb
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.csproj.CoreCompileInputs.cache
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.exe
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.pdb
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.csprojResolveAssemblyReference.cache
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\act1.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\notes.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\obj1.txt

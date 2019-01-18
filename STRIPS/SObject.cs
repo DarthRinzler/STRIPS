@@ -9,6 +9,7 @@ namespace STRIPS
 	public class SObject 
 	{
 		public string Name { get; set; }
+        public bool Truth { get; set; }
 		public Dictionary<string, SObject> Properties { get; }
         public static SObject Refs = new SObject("references");
 
@@ -18,6 +19,7 @@ namespace STRIPS
             {
                 this.Name = other.Name;
                 this.Properties = other.Properties.ToDictionary(kv => kv.Key, kv => new SObject(kv.Value));
+                this.Truth = other.Truth;
             }
         }
 
@@ -25,6 +27,7 @@ namespace STRIPS
 		{
             Properties = new Dictionary<string, SObject>();
 			Name = name;
+            Truth = true;
 		}
 
         public SObject this[string key]
@@ -57,6 +60,20 @@ namespace STRIPS
         public bool ContainsKey(string key)
         {
             return Properties.ContainsKey(key);
+        }
+
+        public bool IsTrue(params string[] predicates)
+        {
+            SObject cur = this;
+            foreach(var pred in predicates)
+            {
+                if (!cur.TryGetValue(pred, out cur))
+                {
+                    return false;
+                }
+            }
+
+            return cur.Truth;
         }
 
         public bool TryGetValue(string key, out SObject value)

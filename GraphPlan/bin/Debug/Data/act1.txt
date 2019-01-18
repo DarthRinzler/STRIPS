@@ -1,0 +1,10 @@
+﻿(Test (x y z)
+	(Pre 
+		(x N y)	
+		(y N x)
+		(y I z)
+	)
+	(Post
+		(y I S)	
+	)
+)

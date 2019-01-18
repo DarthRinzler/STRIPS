@@ -30,9 +30,9 @@ namespace STRIPS
             return ret;
         }
 
-        public Dictionary<string, ActionDef> ParseActions()
+        public Dictionary<string, Action> ParseActions()
         {
-            var ret = new List<ActionDef>();
+            var ret = new List<Action>();
             while(_tok.PeekToken() != null)
             {
                 ret.Add(ParseAction()); 
@@ -94,7 +94,7 @@ namespace STRIPS
             Consume(TokenType.RParen);
         }
 
-        private ActionDef ParseAction()
+        private Action ParseAction()
         {
             // Action Name
             Consume(TokenType.LParen);
@@ -124,7 +124,7 @@ namespace STRIPS
             Consume(TokenType.RParen);
             Consume(TokenType.RParen);
 
-            return new ActionDef(name, parameters, pre, post);
+            return new Action(name, parameters, pre, post);
         }
 
         private List<string> ParseSignature()
@@ -153,43 +153,6 @@ namespace STRIPS
             Conjunction ret = new Conjunction(predicates.ToArray());
             return ret;
         }
-
-        /*
-        private Expression ParseExpression(List<string> parameters)
-        {
-            Expression ret = null;
-            Consume(TokenType.LParen);
-            var next = _tok.PeekToken().Type;
-            
-            if (next == TokenType.And)
-            {
-                Consume(TokenType.And);
-
-                List<Expression> andExpressions = new List<Expression>();
-                while(_tok.PeekToken().Type != TokenType.RParen)
-                {
-                    Expression expr = ParseExpression(parameters);
-                    andExpressions.Add(expr);
-                }
-
-                ret = new ConjuctionExpression(andExpressions.ToArray());
-            }
-            else if (next == TokenType.Not)
-            {
-                Consume(TokenType.Not);
-                var expr = ParseExpression(parameters);
-                ret = new NotExpression(expr);
-            }
-            else
-            {
-                ret = ParsePredicate(parameters);
-            }
-
-            Consume(TokenType.RParen);
-
-            return ret;
-        }
-        */
 
         private Expression ParsePredicate(List<string> parameters)
         {

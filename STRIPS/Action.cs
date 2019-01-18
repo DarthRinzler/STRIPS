@@ -6,14 +6,16 @@ using System.Threading.Tasks;
 
 namespace STRIPS
 {
-	public class ActionDef
+	public class Action
 	{
+        private static string[] padding = new string[] { "", "\t", "\t\t", "\t\t\t", "\t\t\t\t" };
+
 		public string Name { get; private set; }
         public List<string> Parameters { get; private set; }
 		public Conjunction Precondition { get; private set; }
 		public Conjunction Effect { get; private set; }
 
-		public ActionDef(string name, List<string> parameters, Conjunction precondition, Conjunction effect)
+		public Action(string name, List<string> parameters, Conjunction precondition, Conjunction effect)
 		{
 			Name = name;
             Parameters = parameters;
@@ -45,15 +47,6 @@ namespace STRIPS
             return candidates;
         }
 
-        /*
-         *  foreach parameter p:
-         *      foreach predicate d in PRE that contains p:
-         *          if (d.idx == 0) check right
-         *
-         * NEED TO FILTER OUT INVALID FIRST PARAMETERS
-         * 
-         */
-        string[] padding = new string[] { "", "\t", "\t\t", "\t\t\t", "\t\t\t\t" };
         public void Combinations(SObject[] parameters, SObject world, int candidateParamIdx, List<ActionInst> candidates)
         {
             foreach (SObject candidateParam in world.Properties.Values)
@@ -174,10 +167,10 @@ namespace STRIPS
 
     public class ActionInst
     {
-        public ActionDef Definition { get; set; }
+        public Action Definition { get; set; }
         public SObject[] Parameters { get; set; }
 
-        public ActionInst(ActionDef def, SObject[] parameters)
+        public ActionInst(Action def, SObject[] parameters)
         {
             Definition = def;
             Parameters = parameters;

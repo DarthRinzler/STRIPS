@@ -1,0 +1,20 @@
+﻿(Test (x y z)
+	(Pre 
+		(x N y)	
+		(y N x)
+		(y I z)
+	)
+	(Post
+		(y I S)	
+	)
+)
+
+(Test2 (x y z)
+	(Pre
+		(x N y)	
+		(Not (y N x)	
+	)
+	(Post
+		(y N x)	
+	)
+)

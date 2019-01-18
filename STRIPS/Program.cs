@@ -9,7 +9,7 @@ namespace STRIPS
 {
 	class Program
 	{
-        static Dictionary<string, ActionDef> Actions;
+        static Dictionary<string, Action> Actions;
         static SObject World;
 
 		static void Main(string[] args)
@@ -19,6 +19,8 @@ namespace STRIPS
 
             var aparser = new Parser("data\\actions.txt");
             Actions = aparser.ParseActions();
+
+
 
             GoalMode();
             //DebugMode();
@@ -54,7 +56,7 @@ namespace STRIPS
                 var input = Console.ReadLine().ToLower().Split(' ');
 
                 // If Action
-                ActionDef action = null;
+                Action action = null;
                 if (Actions.TryGetValue(input[0], out action))
                 {
                     var notFound = input.Skip(1).FirstOrDefault(p => !World.ContainsKey(p));
@@ -95,19 +97,7 @@ namespace STRIPS
                 // If Object
                 else if (World.ContainsKey(input[0]))
                 {
-                    var cur = World[input[0]];
-
-                    for(int i=1; i<input.Length; i++)
-                    {
-                        var key = input[i];
-                        if (cur.ContainsKey(key))
-                        {
-                            cur = cur[key];
-                        }
-                        else Console.WriteLine("False");
-                    }
-
-                    Console.WriteLine(cur);
+                    Console.WriteLine(World.IsTrue(input));
                 }
             }
         }

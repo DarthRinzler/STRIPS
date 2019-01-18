@@ -3,15 +3,17 @@
 (player
 	(is hungry)
 	(is movable)
-	(Name 
-		(first graham )
-		(last (henry) )
+	(name 
+		(graham)
+		(henry)
 	)
 	(at home)
 	(has energy)
 	(has car)
 	(is human)
 )
+
+(graham at home)
 
 (Clerk
 	(at store)
