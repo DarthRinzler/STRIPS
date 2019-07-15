@@ -6,22 +6,22 @@ using System.Threading.Tasks;
 
 namespace GraphPlan
 {
-    public struct ActionDef
+    public struct ActionDefinition
     {
         public string Name { get; set; }
-        public HashSet<PredicateDef> PositivePre { get; set; }
-        public HashSet<PredicateDef> NegativePre { get; set; }
-        public HashSet<PredicateDef> PositivePost { get; set; }
-        public HashSet<PredicateDef> NegativePost { get; set; }
+        public HashSet<PropositionDefinition> PositivePre { get; set; }
+        public HashSet<PropositionDefinition> NegativePre { get; set; }
+        public HashSet<PropositionDefinition> PositivePost { get; set; }
+        public HashSet<PropositionDefinition> NegativePost { get; set; }
         public IList<uint> CtParams { get; set; }
 
-        public ActionDef(
+        public ActionDefinition(
             string name, 
             IList<uint> ctParams, 
-            HashSet<PredicateDef> posPre, 
-            HashSet<PredicateDef> negPre, 
-            HashSet<PredicateDef> posPost, 
-            HashSet<PredicateDef> negPost)
+            HashSet<PropositionDefinition> posPre, 
+            HashSet<PropositionDefinition> negPre, 
+            HashSet<PropositionDefinition> posPost, 
+            HashSet<PropositionDefinition> negPost)
         {
             Name = name;
             CtParams = ctParams;
@@ -37,12 +37,12 @@ namespace GraphPlan
         }
     }
 
-    public struct ActionInst
+    public class Action
     {
         public uint[] Parameters { get; set; }
-        public ActionDef Definition { get; set; }
+        public ActionDefinition Definition { get; set; }
 
-        public ActionInst(ActionDef def, uint[] parameters)
+        public Action(ActionDefinition def, uint[] parameters)
         {
             Definition = def;
             Parameters = parameters;
@@ -50,8 +50,8 @@ namespace GraphPlan
 
         public override string ToString()
         {
-            string paramStrs = String.Join(",", Parameters.Select(p => Ids.IdToName[p]));
-            return $"{Definition.Name}: {paramStrs}";
+            string paramStrs = String.Join(" ", Parameters.Select(p => Ids.IdToName[p]));
+            return $"{Definition.Name} {paramStrs}";
         }
     }
 }

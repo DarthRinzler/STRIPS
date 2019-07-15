@@ -1,44 +1,40 @@
-﻿(Test (x y)
-	(Pre 
-		(x N y)	
-		(y N x)
-		(y I F)
+﻿(Copy (a b prop val)
+	(Pre
+		(a prop val)
+		(Not (b prop val))
 	)
 	(Post
-		(y I S)	
+		(b prop val)	
 	)
 )
 
+ALL
 N P V
 -----
-A N B
-A N C
-B N A
-C N D
-D N E
-A I F
-G O T
-H I J
+A P1 V1
+B P2 V2
+C P2 V2
+C P3 V3
+C P1 V1
 
 P1
-x y
----
-A B
-A C
-B A
-C D
-D E
+a b prop val
+-----------
+A - P1 V1
+B - P2 V2
+C - P2 V2
+C - P3 V3
+C - P1 V1
 
 P2
-x y
----
-B A
-C A
-A B
-D C
-E D
+a b prop val
+-----------
+- A P1 V1
+- B P2 V2
+- C P2 V2
+- C P3 V3
+- C P1 V1
 
-P3
-y
---
-A
+Ret
+a b prop val
+------------

@@ -190,6 +190,7 @@ namespace STRIPS
         {
             var tok = _tok.ReadToken();
             if (tok.Type != t) Error(t, tok.Type);
+            Console.Write(t+" ");
             return tok;
         }
 

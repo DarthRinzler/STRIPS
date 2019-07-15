@@ -11,7 +11,7 @@ namespace GraphPlan
     {
         public State ParseState(string path)
         {
-            var predicates = new Dictionary<UInt64, Predicate>();
+            var predicates = new Dictionary<UInt64, Proposition>();
 
             using (var sr = new FileStream(path, FileMode.Open))
             {
@@ -20,7 +20,7 @@ namespace GraphPlan
                 while(tok.PeekToken() != null)
                 {
                     bool g;
-                    var p = ParsePredicate(tok, out g);
+                    var p = ParseProposition(tok, out g);
                     predicates[p.Id] = p;
                 }
             }
@@ -28,9 +28,9 @@ namespace GraphPlan
             return new State(predicates);
         }
 
-        public Dictionary<string, ActionDef> ParseActions(string path)
+        public Dictionary<string, ActionDefinition> ParseActions(string path)
         {
-            var ret = new Dictionary<string, ActionDef>();
+            var ret = new Dictionary<string, ActionDefinition>();
             using (var sr = new FileStream(path, FileMode.Open))
             {
                 var tok = new Tokenizer(sr);
@@ -43,13 +43,13 @@ namespace GraphPlan
             return ret;
         }
 
-        private Predicate ParsePredicate(Tokenizer tok)
+        private Proposition ParseProposition(Tokenizer tok)
         {
             bool b = false;
-            return ParsePredicate(tok, out b);
+            return ParseProposition(tok, out b);
         }
 
-        private Predicate ParsePredicate(Tokenizer tok, out bool negated)
+        private Proposition ParseProposition(Tokenizer tok, out bool negated)
         {
             tok.Consume(TokenType.LParen);
 
@@ -63,17 +63,9 @@ namespace GraphPlan
 
             string name = tok.Consume(TokenType.Id).Value;
             uint nameId = Ids.GetId(name);
-            if (tok.PeekType() == TokenType.RParen)
-            {
-                return new Predicate(nameId, null, null);
-            }
 
             string prop = tok.Consume(TokenType.Id).Value;
             uint propId = Ids.GetId(prop);
-            if (tok.PeekType() == TokenType.RParen)
-            {
-                return new Predicate(nameId, propId, null);
-            }
 
             string val = tok.Consume(TokenType.Id).Value;
             uint valId = Ids.GetId(val);
@@ -81,10 +73,10 @@ namespace GraphPlan
 
             if (negated) tok.Consume(TokenType.RParen);
 
-            return new Predicate(nameId, propId, valId);
+            return new Proposition(nameId, propId, valId);
         }
 
-        private ActionDef ParseAction(Tokenizer tok)
+        private ActionDefinition ParseAction(Tokenizer tok)
         {
             // Action Name
             tok.Consume(TokenType.LParen);
@@ -94,7 +86,7 @@ namespace GraphPlan
             List<uint> parameters = ParseSignature(tok);
 
             // Pre Expression
-            List<PredicateDef> prePreds = new List<PredicateDef>();
+            List<PropositionDefinition> prePreds = new List<PropositionDefinition>();
             tok.Consume(TokenType.LParen);
             tok.Consume(TokenType.Pre);
             if (tok.PeekToken().Type != TokenType.RParen)
@@ -104,7 +96,7 @@ namespace GraphPlan
             tok.Consume(TokenType.RParen);
 
             // Post Expression
-            List<PredicateDef> postPreds = new List<PredicateDef>();
+            List<PropositionDefinition> postPreds = new List<PropositionDefinition>();
             tok.Consume(TokenType.LParen);
             tok.Consume(TokenType.Post);
             if (tok.PeekToken().Type != TokenType.RParen)
@@ -119,7 +111,7 @@ namespace GraphPlan
             var posPost = postPreds.Where(p => !p.Negated).ToHashSet();
             var negPost = postPreds.Where(p => p.Negated).ToHashSet();
 
-            return new ActionDef(
+            return new ActionDefinition(
                 name,
                 parameters, 
                 posPre, 
@@ -143,54 +135,39 @@ namespace GraphPlan
             return ret;
         }
 
-        private List<PredicateDef> ParseConjuction(List<uint> parameters, Tokenizer tok)
+        private List<PropositionDefinition> ParseConjuction(List<uint> parameters, Tokenizer tok)
         {
-            var predicates = new List<PredicateDef>();
+            var predicates = new List<PropositionDefinition>();
             while (tok.PeekToken().Type != TokenType.RParen)
             {
-                PredicateDef pred = ParsePredicateDef(parameters, tok);
+                PropositionDefinition pred = ParsePropositionDefinition(parameters, tok);
                 predicates.Add(pred);
             }
 
             return predicates;
         }
 
-        private PredicateDef ParsePredicateDef(List<uint> parameters, Tokenizer tok)
+        private PropositionDefinition ParsePropositionDefinition(List<uint> parameters, Tokenizer tok)
         {
             bool negated = false;
-            var pred = ParsePredicate(tok, out negated);
+            var proposition = ParseProposition(tok, out negated);
 
             CtParameter name = new CtParameter();
-            var nameIdx = parameters.IndexOf(pred.NameId);
+            var nameIdx = parameters.IndexOf(proposition.NameId);
             if (nameIdx >= 0) name.Idx = nameIdx;
-            else name.Id = pred.NameId;
+            else name.Id = proposition.NameId;
 
-            if (pred.ValueId != null)
-            {
-                CtParameter prop = new CtParameter();
-                var propIdx = parameters.IndexOf(pred.PropertyId.Value);
-                if (propIdx >= 0) prop.Idx = propIdx;
-                else prop.Id = pred.PropertyId;
+            CtParameter property = new CtParameter();
+            var propIdx = parameters.IndexOf(proposition.PropertyId);
+            if (propIdx >= 0) property.Idx = propIdx;
+            else property.Id = proposition.PropertyId;
 
-                CtParameter value = new CtParameter();
-                var valueIdx = parameters.IndexOf(pred.ValueId.Value);
-                if (valueIdx >= 0) value.Idx = valueIdx;
-                else value.Id = pred.ValueId.Value;
+            CtParameter value = new CtParameter();
+            var valueIdx = parameters.IndexOf(proposition.ValueId);
+            if (valueIdx >= 0) value.Idx = valueIdx;
+            else value.Id = proposition.ValueId;
 
-                return new PredicateDef(name, prop, value, negated);
-            }
-            else if (pred.PropertyId != null)
-            {
-                CtParameter prop = new CtParameter();
-                var propIdx = parameters.IndexOf(pred.PropertyId.Value);
-                if (propIdx >= 0) prop.Idx = propIdx;
-                else prop.Id = pred.PropertyId;
-                return new PredicateDef(name, prop, null, negated);
-            }
-            else
-            {
-                return new PredicateDef(name, null, null, negated);
-            }
+            return new PropositionDefinition(proposition, name, property, value, negated);
         }
 
         private void Error(TokenType expected, TokenType actual)

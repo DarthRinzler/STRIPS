@@ -5,282 +5,382 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GraphPlan
-{
-    public class State
-    {
-        public Dictionary<UInt64, Predicate> Predicates { get; private set; }
-        public Dictionary<uint, Predicate[]> Properties { get; private set; }
-        public Dictionary<uint, Predicate[]> Names { get; private set; }
-        public Dictionary<uint, Predicate[]> Values { get; private set; }
+namespace GraphPlan {
+    public class State {
+        public Dictionary<UInt64, Proposition> Propositions { get; private set; }
+        public Dictionary<uint, Proposition[]> Properties { get; private set; }
+        public Dictionary<uint, Proposition[]> Names { get; private set; }
+        public Dictionary<uint, Proposition[]> Values { get; private set; }
 
-        public State(Dictionary<UInt64, Predicate> predicates)
-        {
-            Predicates = predicates;
+        public State(Dictionary<UInt64, Proposition> propositions) {
+            Propositions = propositions;
 
-            Names = Predicates
-                .GroupBy(pred => pred.Value.NameId)
+            Names = Propositions
+                .GroupBy(prop => prop.Value.NameId)
                 .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
 
-            Properties = Predicates
-                .GroupBy(pred => pred.Value.PropertyId)
-                .ToDictionary(g => g.Key.Value, g => g.Select(v => v.Value).ToArray());
+            Properties = Propositions
+                .GroupBy(prop => prop.Value.PropertyId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
 
-            Values = Predicates
-                .GroupBy(pred => pred.Value.ValueId)
-                .ToDictionary(g => g.Key.Value, g => g.Select(v => v.Value).ToArray());
+            Values = Propositions
+                .GroupBy(prop => prop.Value.ValueId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
         }
 
-        public bool SatisfiesPrecondition(ActionInst action)
-        {
-            foreach (var p in action.Definition.PositivePre)
-            {
-                var pred = p.GetPredicate(action.Parameters);
-                if (!Predicates.ContainsKey(pred.Id)) return false;
+        public bool SatisfiesPrecondition(Action action) {
+            foreach (var propositionDefinition in action.Definition.PositivePre) {
+                var proposition = propositionDefinition.GetProposition(action.Parameters);
+                if (!Propositions.ContainsKey(proposition.Id)) return false;
             }
 
-            foreach (var p in action.Definition.NegativePre)
-            {
-                var pred = p.GetPredicate(action.Parameters);
-                if (Predicates.ContainsKey(pred.Id)) return false;
+            foreach (var p in action.Definition.NegativePre) {
+                var prop = p.GetProposition(action.Parameters);
+                if (Propositions.ContainsKey(prop.Id)) return false;
             }
 
             return true;
         }
 
-        public void ApplyActionMutate(ActionInst action)
-        {
-            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetPredicate(action.Parameters));
-            foreach (var p in positiveEffects)
-            {
-                Predicates[p.Id] = p;
+        public void ApplyActionMutate(Action action) {
+            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetProposition(action.Parameters));
+            foreach (var p in positiveEffects) {
+                Propositions[p.Id] = p;
             }
 
-            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetPredicate(action.Parameters));
-            foreach (var p in negativeEffects)
-            {
-                if (Predicates.ContainsKey(p.Id))
-                {
-                    Predicates.Remove(p.Id);
+            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetProposition(action.Parameters));
+            foreach (var p in negativeEffects) {
+                if (Propositions.ContainsKey(p.Id)) {
+                    Propositions.Remove(p.Id);
                 }
             }
         }
 
-        public State ApplyAction(ActionInst action)
-        {
-            var predicates = new Dictionary<UInt64, Predicate>(this.Predicates);
+        public State ApplyAction(Action action) {
+            var propositions = new Dictionary<UInt64, Proposition>(this.Propositions);
 
-            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetPredicate(action.Parameters));
-            foreach (var p in positiveEffects)
-            {
-                predicates[p.Id] = p;
+            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetProposition(action.Parameters));
+            foreach (var p in positiveEffects) {
+                propositions[p.Id] = p;
             }
 
-            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetPredicate(action.Parameters));
-            foreach (var p in negativeEffects)
-            {
-                if (predicates.ContainsKey(p.Id))
-                {
-                    predicates.Remove(p.Id);
+            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetProposition(action.Parameters));
+            foreach (var p in negativeEffects) {
+                if (propositions.ContainsKey(p.Id)) {
+                    propositions.Remove(p.Id);
                 }
             }
 
-            return new State(predicates);
+            return new State(propositions);
         }
 
-        public IEnumerable<ActionInst> GetAllActions(List<ActionDef> actionDefinitions)
-        {
+        public IEnumerable<Action> GetAllActions(List<ActionDefinition> actionDefinitions) {
             return actionDefinitions.SelectMany(GetActionForActionDef);
         }
 
-        private IEnumerable<ActionInst> GetActionForActionDef(ActionDef ad)
-        {
+        private IEnumerable<Action> GetActionForActionDef(ActionDefinition ad) {
             ParamSet knownSet = null;
+            var names = Propositions
+                .Select(p => p.Value.NameId)
+                .ToArray();
+
+            // If action has no parameters
+            if (ad.CtParams.Count == 0) {
+                yield return new Action(ad, new uint[] { });
+                yield break;
+            }
 
             // Each N+V gets mapped to a paramIdx
-            foreach (PredicateDef predDef in ad.PositivePre)
-            {
+            foreach (PropositionDefinition propDef in ad.PositivePre) {
+                IEnumerable<Proposition> propositions = null;
+                int[] valueIdxs = null;
+
+                // Exit if no matches found
+                if (knownSet != null && !knownSet.Params.Any()) {
+                    break;
+                }
                 // R L R
-                if (predDef.Name.Idx.HasValue && predDef.Property.Value.Id.HasValue && predDef.Value.Value.Idx.HasValue)
-                {
-                    // If first Predicate
-                    if (knownSet == null)
-                    {
-                        var paramList = Properties[predDef.Property.Value.Id.Value]
-                            .Select(pred => new[] {
-                                new Param(pred.NameId, predDef.Name.Idx.Value),
-                                new Param(pred.ValueId.Value, predDef.Value.Value.Idx.Value)
-                            })
-                            .ToList();
-
-                        knownSet = new ParamSet(paramList);
+                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Idx.HasValue) {
+                    uint property = propDef.Property.Id.Value;
+                    if (!Properties.ContainsKey(property)) {
+                        yield break;
                     }
-                    // If NO satisfactoryParams left, return 
-                    else if (!knownSet.Params.Any())
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        // Join known param with new params
-                        var newParams = Properties[predDef.Property.Value.Id.Value]
-                            .Select(pred => new[] {
-                            new Param(pred.NameId, predDef.Name.Idx.Value),
-                            new Param(pred.ValueId.Value, predDef.Value.Value.Idx.Value)
-                            })
-                            .ToList();
 
-                        var newSet = new ParamSet(newParams);
-
-                        var next = knownSet.Intersect(newSet);
-                        knownSet = next;
-                    }
+                    propositions = Properties[property];
+                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Value.Idx.Value };
                 }
                 // R L L
-                else if (predDef.Name.Idx.HasValue && predDef.Property.Value.Id.HasValue && predDef.Value.Value.Id.HasValue)
-                {
-
-                }
-            }
-
-            return null;
-        }
-
-        private List<Param[]> GetParams(PredicateDef pre, List<Param[]> foundSoFar, bool invert=false)
-        {
-            // N P V
-            if (pre.Property.HasValue && pre.Value.HasValue)
-            {
-                // R L R
-                if (pre.Name.Idx.HasValue && pre.Property.Value.Id.HasValue && pre.Value.Value.Idx.HasValue)
-                {
-                    if (foundSoFar.Any())
-                    {
-                        
+                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Id.HasValue) {
+                    uint prop = propDef.Property.Id.Value;
+                    if (!Properties.ContainsKey(prop)) {
+                        yield break;
                     }
-                    else
-                    {
-                        var tuples = Properties[pre.Property.Value.Id.Value]
-                            .Select(p => new[] {
-                            new Param(p.NameId, pre.Name.Idx.Value),
-                            new Param(p.ValueId.Value, pre.Value.Value.Idx.Value)
-                            })
-                            .ToList();
-                        return tuples;
-                    }
+
+                    propositions = Properties[prop].Where(p => p.ValueId == propDef.Value.Id.Value);
+                    valueIdxs = new[] { propDef.Name.Idx.Value };
                 }
                 // R R R
-                else if (pre.Name.Idx.HasValue && pre.Property.Value.Idx.HasValue && pre.Value.Value.Idx.HasValue)
-                {
+                else if (propDef.Name.Idx.HasValue && propDef.Property.Idx.HasValue && propDef.Value.Idx.HasValue) {
+                    propositions = Propositions.Values;
+                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Property.Idx.Value, propDef.Value.Idx.Value };
+                }
+                else {
+                    throw new NotImplementedException();
+                }
+
+                // Convert Preds to Param objects
+                var validParams = propositions  
+                    .Select(proposition => {
+                        var ret = new uint[ad.CtParams.Count];
+                        if (propDef.Name.Idx.HasValue) ret[propDef.Name.Idx.Value] = proposition.NameId;
+                        if (propDef.Property.Idx.HasValue) ret[propDef.Property.Idx.Value] = proposition.PropertyId;
+                        if (propDef.Value.Idx.HasValue) ret[propDef.Value.Idx.Value] = proposition.ValueId;
+                        return ret;
+                    })
+                    .ToList();
+
+                // If first Proposition 
+                if (knownSet == null) {
+                    knownSet = new ParamSet(validParams, valueIdxs);
+                }
+                // Join known param with new params
+                else {
+                    var newSet = new ParamSet(validParams, valueIdxs);
+                    knownSet = knownSet.Join(newSet);
+                    //Console.WriteLine(knownSet.Params.Count);
+                }
+            }
+
+            if (knownSet != null) {
+                knownSet = knownSet.Expand(ad, names);
+            }
+
+            foreach (PropositionDefinition propDef in ad.NegativePre) {
+                IEnumerable<Proposition> props = null;
+                int[] valueIdxs = null;
+
+                // Exit if no matches found
+                if (knownSet != null && !knownSet.Params.Any()) {
+                    break;
+                }
+                // R L R
+                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Idx.HasValue) {
+                    uint prop = propDef.Property.Id.Value;
+                    if (!Properties.ContainsKey(prop)) {
+                        yield break;
+                    }
+
+                    props = Properties[prop];
+                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Value.Idx.Value };
                 }
                 // R L L
-                else if (pre.Name.Idx.HasValue && pre.Property.Value.Id.HasValue && pre.Value.Value.Id.HasValue)
-                {
+                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Id.HasValue) {
+                    uint prop = propDef.Property.Id.Value;
+                    if (!Properties.ContainsKey(prop)) {
+                        yield break;
+                    }
 
+                    props = Properties[prop]
+                        .Where(p => p.ValueId == propDef.Value.Id.Value);
+                    valueIdxs = new[] { propDef.Name.Idx.Value };
                 }
-                // L R R
-                else if (pre.Name.Id.HasValue && pre.Property.Value.Idx.HasValue && pre.Value.Value.Idx.HasValue)
-                {
+                // R R R
+                else {
+                    props = Propositions.Values;
+                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Property.Idx.Value, propDef.Value.Idx.Value };
+                }
 
+                // Convert Propositions to Param objects
+                var toRemove = props  
+                    .Select(prop => {
+                        var ret = new uint[ad.CtParams.Count];
+                        if (propDef.Name.Idx.HasValue) ret[propDef.Name.Idx.Value] = prop.NameId;
+                        if (propDef.Property.Idx.HasValue) ret[propDef.Property.Idx.Value] = prop.PropertyId;
+                        if (propDef.Value.Idx.HasValue) ret[propDef.Value.Idx.Value] = prop.ValueId;
+                        return ret;
+                    })
+                    .ToList();
+
+                // If first Proposition 
+                if (knownSet == null) {
+                    knownSet = new ParamSet(toRemove, valueIdxs);
+                }
+                // Remove invalid propositions from KnownSet
+                else {
+                    var newSet = new ParamSet(toRemove, valueIdxs);
+                    knownSet = knownSet.Except(newSet);
                 }
             }
-            // N P
-            else if (pre.Property.HasValue)
-            {
 
+            if (knownSet != null) {
+                knownSet = knownSet.Expand(ad, names);
+                foreach (var action in knownSet.Params.Select(p => new Action(ad, p))) { 
+                    yield return action;
+                }
             }
-            // N
-            else
-            {
-
-            }
-
-            return null;
         }
 
-        public override string ToString()
-        {
-            return String.Join("\n", Predicates.Select(p => p.Value.ToString()));
+        public override string ToString() {
+            return String.Join(" \n", Propositions.Select(p => p.Value.ToString()));
         }
     }
 
-    struct Param
-    {
+    public class Param : IEqualityComparer<Param> {
         public uint Value;
         public int Idx;
 
-        public Param(uint value, int idx)
-        {
+        public Param(uint value, int idx) {
             Value = value;
             Idx = idx;
         }
 
-        public override string ToString()
-        {
+        public bool Equals(Param x, Param y) {
+            return x.Value == y.Value && x.Idx == y.Idx;
+        }
+
+        public int GetHashCode(Param obj) {
+            return obj.Idx.GetHashCode() ^ obj.Value.GetHashCode();
+        }
+
+        public override string ToString() {
             return Ids.IdToName[Value];
         }
     }
 
-    class ParamSet 
+    public class ParamSet 
     {
-        public List<Param[]> Params { get; private set; }
+        public List<uint[]> Params { get; private set; }
+        public int[] ValueIndexes { get; private set; }
+        public int[] AllIdxs { get; private set; }
 
-        public ParamSet(List<Param[]> p)
-        {
+        public ParamSet(List<uint[]> p, int[] valueIdxs) {
+            ValueIndexes = valueIdxs;
+            if (p.Any()) {
+                AllIdxs = Enumerable
+                    .Range(0, p.First().Length)
+                    .ToArray();
+            }
             Params = p;
         }
 
-        public ParamSet Intersect(ParamSet other)
-        {
-            var keyIdxs = Params
-                .First()
-                .Select(p => p.Idx)
-                .Intersect(other.Params.First().Select(p => p.Idx))
-                .OrderBy(i => i)
-                .ToHashSet();
+        public ParamSet(List<uint[]> p) {
+            ValueIndexes = Enumerable
+                .Range(0, p.First().Length)
+                .ToArray();
+            AllIdxs = ValueIndexes;
+            Params = p;
+        }
 
-            Func<Param[], string> GetKey = (array) => {
-                StringBuilder sb = new StringBuilder();
-                foreach (var a in array.OrderBy(a => a.Idx))
-                {
-                    if (keyIdxs.Contains(a.Idx))
-                    {
-                        sb.Append(a.Idx+"."+a+"&");
-                    }
+        public ParamSet Join(ParamSet other) {
+            var joinIndexes = ValueIndexes
+                .Intersect(other.ValueIndexes)
+                .ToArray();
+
+            if (!joinIndexes.Any()) {
+                
+            }
+
+            var p = Params
+                .Join(
+                    other.Params,
+                    k => GetKey(k, joinIndexes),
+                    k => GetKey(k, joinIndexes),
+                    Join
+                )
+                .Where(pa => pa != null)
+                .ToList();
+
+            var newIndexes = ValueIndexes
+                .Union(other.ValueIndexes)
+                .ToArray();
+
+            return new ParamSet(p, newIndexes);
+        }
+
+        private uint[] Join(uint[] a, uint[] b) {
+            var ret = new uint[a.Length];
+            HashSet<uint> values = new HashSet<uint>();
+            for (int i=0; i<ret.Length; i++) {
+                if (a[i] != 0) ret[i] = a[i];
+                else if (b[i] != 0) ret[i] = b[i];
+                if (ret[i] != 0 && values.Contains(ret[i])) {
+                    return null;
                 }
-                return sb.ToString();
-            };
+                values.Add(ret[i]);
+            }
+            return ret;
+        }
 
-            var ad = Params.GroupBy(GetKey).ToDictionary(g => g.Key, g => g.ToArray());
-            var bd = other.Params.GroupBy(GetKey).ToDictionary(g => g.Key, g => g.ToArray());
+        private string GetKey(uint[] a, int[] joinIndexes) {
+            //var ret = String.Join("|", joinIndexes.Select(ji => a[ji]+"."+ji));
+            var ret = String.Join("|", joinIndexes.Select(ji => Ids.IdToName[a[ji]]+"."+ji));
+            return ret;
+        }
 
-            var keys = ad.Keys.Intersect(bd.Keys).ToArray();
-            var r = new List<Param[]>();
+        public ParamSet Except(ParamSet other) {
+            var joinIndexes = ValueIndexes
+                .Intersect(other.ValueIndexes)
+                .ToArray();
 
-            foreach (var k in keys)
-            {
-                var avl = ad[k];
-                var bvl = bd[k];
+            var ad = Params
+                .GroupBy(p => GetKey(p, joinIndexes))
+                .ToDictionary(k => k.Key, k => k.ToList());
 
-                foreach (var av in avl)
-                {
-                    foreach (var bv in bvl)
-                    {
-                        var pr = new Param[av.Length + bv.Length - keyIdxs.Count];
-                        foreach (var p in av)
-                        {
-                            pr[p.Idx] = p;
-                        }
-                        foreach (var p in bv)
-                        {
-                            pr[p.Idx] = p;
-                        }
-                        r.Add(pr);
-                    }
+            foreach (var op in other.Params) {
+                var key = GetKey(op, joinIndexes);
+                if (ad.ContainsKey(key)) {
+                    //Console.WriteLine(key);
+                    ad.Remove(key);
                 }
             }
 
-            return new ParamSet(r);
+            var ret = ad.SelectMany(g => g.Value).ToList();
+            var newIndexes = ValueIndexes
+                .Union(other.ValueIndexes)
+                .ToArray();
+
+            return new ParamSet(ret, newIndexes);
+        }
+
+        public ParamSet Expand(ActionDefinition ad, uint[] names) {
+            var ret = new List<uint[]>();
+
+            if (!Params.Any() || Params.First().All(p => p != 0)) {
+                return this;
+            }
+
+            var added = new HashSet<string>();
+            foreach (var paramArray in Params) {
+                var expanded = ExpandVariables(paramArray, 0, names, added);
+                ret.AddRange(expanded);
+            }
+            return new ParamSet(ret);
+        }
+
+        private IEnumerable<uint[]> ExpandVariables(uint[] paramArray, int idx, uint[] names, HashSet<string> added) {
+            for (int i=idx; i<paramArray.Length; i++) {
+                if (paramArray[i] == 0) {
+                    foreach (var name in names.Where(n => !paramArray.Contains(n))) {
+                        var pa = paramArray.ToArray();
+                        pa[i] = name;
+                        foreach (var expanded in ExpandVariables(pa, i + 1, names, added)) {
+                            yield return expanded;
+                        }
+                    }
+
+                    yield break; 
+                }
+            }
+
+            var key = GetKey(paramArray, AllIdxs);
+            if (!added.Contains(key)) {
+                added.Add(key);
+                yield return paramArray;
+            }
+        }
+
+        public override string ToString() {
+            return String.Join("|", Params.Select(pa => String.Join("_", pa.Select(p => p > 0 ? Ids.IdToName[p] : "?"))));
         }
     }
 }
