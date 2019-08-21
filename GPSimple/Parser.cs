@@ -5,14 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GraphPlan
+namespace GPSimple
 {
     public class Parser
     {
-        public State2 ParseState2(string path)
+        public PropositionLayer ParsePropositionLayer(string path)
         {
-            var positivePropositions = new Dictionary<UInt64, PropositionNode>();
-            var negativePropositions = new Dictionary<UInt64, PropositionNode>();
+            var predicates = new Dictionary<UInt64, Proposition>();
 
             using (var sr = new FileStream(path, FileMode.Open))
             {
@@ -20,39 +19,13 @@ namespace GraphPlan
 
                 while(tok.PeekToken() != null)
                 {
-                    bool negated;
-                    var p = ParseProposition(tok, out negated);
-                    if (negated)
-                    {
-                        negativePropositions[p.Id] = new PropositionNode(p, false);
-                    }
-                    else
-                    {
-                        positivePropositions[p.Id] = new PropositionNode(p, true);
-                    }
+                    bool g;
+                    var p = ParseProposition(tok, out g);
+                    predicates[p.Id] = p;
                 }
             }
 
-            return new State2(positivePropositions, negativePropositions);
-        }
-
-        public State ParseState(string path)
-        {
-            var propositions = new Dictionary<UInt64, Proposition>();
-
-            using (var sr = new FileStream(path, FileMode.Open))
-            {
-                var tok = new Tokenizer(sr);
-
-                while(tok.PeekToken() != null)
-                {
-                    bool negated;
-                    var p = ParseProposition(tok, out negated);
-                    propositions[p.Id] = p;
-                }
-            }
-
-            return new State(propositions);
+            return new PropositionLayer(predicates);
         }
 
         public Dictionary<string, ActionDefinition> ParseActions(string path)

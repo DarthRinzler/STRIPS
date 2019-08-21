@@ -1,8 +1,1 @@
-﻿(A N B)
-(A N C)
-(B N A)
-(C N D)
-(D N E)
-(A I F)
-(G O T)
-(H I J)
+﻿

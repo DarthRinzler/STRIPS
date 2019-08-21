@@ -1,10 +1,35 @@
-﻿(Test (x y z)
-	(Pre 
-		(x N y)	
-		(y N x)
-		(y I z)
+﻿(Copy (objA objB prop val)
+	(Pre
+		(objA prop val)
+		(not (objb prop val))
 	)
 	(Post
-		(y I S)	
+		(objb prop val)
+	)
+)
+
+(Trans (obja objb val)
+	(Pre
+		(objA HAS val)
+		(not (objb HAS val))
+	)
+	(Post
+		(objb HAS val)
+		(not (obja HAS val))
+	)
+)
+
+(Exchange (obja vala objb valb)
+	(pre
+		(obja HAS vala)
+		(objb HAS valb)
+		(not (obja HAS valb))
+		(not (objb HAS vala))
+	)
+	(post
+		(obja HAS valb)
+		(objb HAS vala)
+		(not (obja HAS vala))
+		(not (objb HAS valb))
 	)
 )

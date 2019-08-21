@@ -6,6 +6,19 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace GraphPlan {
+
+    public class State2
+    {
+        public Dictionary<UInt64, PropositionNode> PositivePropositions { get; private set; }
+        public Dictionary<UInt64, PropositionNode> NegativePropositions { get; private set; }
+
+        public State2(Dictionary<ulong, PropositionNode> positivePropositions, Dictionary<ulong, PropositionNode> negativePropositions)
+        {
+            PositivePropositions = positivePropositions;
+            NegativePropositions = negativePropositions;
+        }
+    }
+
     public class State {
         public Dictionary<UInt64, Proposition> Propositions { get; private set; }
         public Dictionary<uint, Proposition[]> Properties { get; private set; }
@@ -29,12 +42,12 @@ namespace GraphPlan {
         }
 
         public bool SatisfiesPrecondition(Action action) {
-            foreach (var propositionDefinition in action.Definition.PositivePre) {
+            foreach (var propositionDefinition in action.Definition.PositivePreconditions) {
                 var proposition = propositionDefinition.GetProposition(action.Parameters);
                 if (!Propositions.ContainsKey(proposition.Id)) return false;
             }
 
-            foreach (var p in action.Definition.NegativePre) {
+            foreach (var p in action.Definition.NegativePreconditions) {
                 var prop = p.GetProposition(action.Parameters);
                 if (Propositions.ContainsKey(prop.Id)) return false;
             }
@@ -91,7 +104,7 @@ namespace GraphPlan {
             }
 
             // Each N+V gets mapped to a paramIdx
-            foreach (PropositionDefinition propDef in ad.PositivePre) {
+            foreach (PropositionDefinition propDef in ad.PositivePreconditions) {
                 IEnumerable<Proposition> propositions = null;
                 int[] valueIdxs = null;
 
@@ -132,9 +145,9 @@ namespace GraphPlan {
                 var validParams = propositions  
                     .Select(proposition => {
                         var ret = new uint[ad.CtParams.Count];
-                        if (propDef.Name.Idx.HasValue) ret[propDef.Name.Idx.Value] = proposition.NameId;
-                        if (propDef.Property.Idx.HasValue) ret[propDef.Property.Idx.Value] = proposition.PropertyId;
-                        if (propDef.Value.Idx.HasValue) ret[propDef.Value.Idx.Value] = proposition.ValueId;
+                        if (propDef.Name.IsVariableRef) ret[propDef.Name.Idx.Value] = proposition.NameId;
+                        if (propDef.Property.IsVariableRef) ret[propDef.Property.Idx.Value] = proposition.PropertyId;
+                        if (propDef.Value.IsVariableRef) ret[propDef.Value.Idx.Value] = proposition.ValueId;
                         return ret;
                     })
                     .ToList();
@@ -155,7 +168,7 @@ namespace GraphPlan {
                 knownSet = knownSet.Expand(ad, names);
             }
 
-            foreach (PropositionDefinition propDef in ad.NegativePre) {
+            foreach (PropositionDefinition propDef in ad.NegativePreconditions) {
                 IEnumerable<Proposition> props = null;
                 int[] valueIdxs = null;
 
@@ -164,7 +177,7 @@ namespace GraphPlan {
                     break;
                 }
                 // R L R
-                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Idx.HasValue) {
+                else if (propDef.Name.IsVariableRef && propDef.Property.Id.HasValue && propDef.Value.IsVariableRef) {
                     uint prop = propDef.Property.Id.Value;
                     if (!Properties.ContainsKey(prop)) {
                         yield break;

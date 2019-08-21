@@ -152,6 +152,9 @@ namespace GraphPlan
         public uint? Id { get; set; }
         public int? Idx { get; set; }
 
+        public bool IsVariableRef { get { return Idx.HasValue; } }
+        public bool IsLiteralRef { get { return !Idx.HasValue; } }
+
         public CtParameter(uint nameId)
         {
             Id = nameId;

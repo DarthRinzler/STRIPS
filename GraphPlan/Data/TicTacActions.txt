@@ -1,4 +1,36 @@
-﻿(WinH (p s1 s2 s3 m)
+﻿(MX (playerX playerO s)
+	(Pre
+		(s is square)
+		(playerX is X)
+		(playerO is O)
+		(playerX has turn)
+		(s has empty)
+	)
+	(Post
+		(not (s has empty))
+		(s has X)
+		(not (playerX has turn))
+		(playerO has turn)
+	)
+)
+
+(MO (playerO playerX s)
+	(Pre
+		(s is square)
+		(playerX is X)
+		(playerO is O)
+		(playerO has turn)
+		(s has empty)
+	)
+	(Post
+		(not (s has empty))
+		(s has O)
+		(not (playerO has turn))
+		(playerX has turn)
+	)
+) 
+
+(WinH (p s1 s2 s3 m)
 	(Pre
 		(p is m)
 		(m is mark)
@@ -52,67 +84,30 @@
 	)
 )
 
+(InferEmpty 
+	(Pre
+
+	)
+	(Post
+	)
+)
+
 (Clear ()
 	(Pre
 	)
 	(Post
-		(not (s0 has x))
-		(not (s0 has o))
-		(not (s1 has x))
-		(not (s1 has o))
-		(not (s2 has x))
-		(not (s2 has o))
-		(not (s3 has x))
-		(not (s3 has o))
-		(not (s4 has x))
-		(not (s4 has o))
-		(not (s5 has x))
-		(not (s5 has o))
-		(not (s6 has x))
-		(not (s6 has o))
-		(not (s7 has x))
-		(not (s7 has o))
-		(not (s8 has x))
-		(not (s8 has o))
+		(s0 has empty)
+		(s1 has empty)
+		(s2 has empty)
+		(s3 has empty)
+		(s4 has empty)
+		(s5 has empty)
+		(s6 has empty)
+		(s7 has empty)
+		(s8 has empty)
 		(p1 has turn)
 		(not (p2 has turn))
 		(not (p1 is winner))
 		(not (p2 is winner))
 	)
 )
-
-(MX (playerX playerO s)
-	(Pre
-		(s is square)
-		(playerX is X)
-		(playerO is O)
-		(playerX has turn)
-		(not (playerO has turn))
-		(not (s has X))
-		(not (s has O))
-	)
-	(Post
-		(s has X)
-		(not (playerX has turn))
-		(playerO has turn)
-	)
-)
-
-(MO (playerO playerX s)
-	(Pre
-		(s is square)
-		(playerX is X)
-		(playerO is O)
-		(playerO has turn)
-		(not (playerX has turn))
-		(not (s has X))
-		(not (s has O))
-	)
-	(Post
-		(s has O)
-		(not (playerO has turn))
-		(playerX has turn)
-	)
-)
-
-

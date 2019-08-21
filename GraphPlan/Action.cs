@@ -9,8 +9,8 @@ namespace GraphPlan
     public struct ActionDefinition
     {
         public string Name { get; set; }
-        public HashSet<PropositionDefinition> PositivePre { get; set; }
-        public HashSet<PropositionDefinition> NegativePre { get; set; }
+        public HashSet<PropositionDefinition> PositivePreconditions { get; set; }
+        public HashSet<PropositionDefinition> NegativePreconditions { get; set; }
         public HashSet<PropositionDefinition> PositivePost { get; set; }
         public HashSet<PropositionDefinition> NegativePost { get; set; }
         public IList<uint> CtParams { get; set; }
@@ -25,8 +25,8 @@ namespace GraphPlan
         {
             Name = name;
             CtParams = ctParams;
-            PositivePre = posPre;
-            NegativePre = negPre;
+            PositivePreconditions = posPre;
+            NegativePreconditions = negPre;
             PositivePost = posPost;
             NegativePost = negPost;
         }
