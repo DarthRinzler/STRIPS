@@ -1,0 +1,63 @@
+﻿(eat (a food)
+	(uphas (a food satisfaction))
+	(pre
+		(a is human)
+		(a is hungry)
+		(food is edible)
+	)
+	(post
+		(not (a is hungry))
+	)
+)
+
+(buy (a b obj loc)
+	(pre
+		(a is human)
+		(b is human)
+		(loc is location)
+	)
+	(atequals (a b loc))
+	(exhas (a b money obj))
+)
+
+(move (a start end)
+	(pre
+		(a is movable)
+		(start is location)
+		(end is location)
+		(start adjacent end)
+	)
+	(upat (a start end))
+)
+
+(work (a)
+	(pre
+		(a at work)
+		(a is human)
+	)
+	(post
+		(a is hungry)	
+	)
+	(uphas (a energy money))
+) 
+
+(inferloc (a b loc)
+	(pre
+		(a has b)
+		(a at loc)
+	)
+	(post
+		(b at loc)
+	)
+)
+
+(reachable (a b c)
+	(pre
+		(not (a adjacent c))
+		(a adjacent b)
+		(b adjacent c)
+	)
+	(post
+		(a adjacent c)
+	)
+)

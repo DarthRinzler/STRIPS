@@ -6,241 +6,131 @@ using System.Threading.Tasks;
 
 namespace GraphPlan {
 
-    public class PropositionLayer
-    {
-        public Dictionary<UInt64, PropositionNode> PositivePropositions { get; set; }        
-        public Dictionary<UInt64, PropositionNode> NegativePropositions { get; set; }        
-        public Dictionary<string, ActionDefinition> AvailableActions { get; set; }
-
-        private Dictionary<uint, PropositionNode[]> _positiveNames;
-        private Dictionary<uint, PropositionNode[]> _positiveProperties;
-        private Dictionary<uint, PropositionNode[]> _positiveValues;
-
-        private Dictionary<uint, PropositionNode[]> _negativeNames;
-        private Dictionary<uint, PropositionNode[]> _negativeProperties;
-        private Dictionary<uint, PropositionNode[]> _negativeValues;
-
-        public PropositionLayer(
-            Dictionary<string, ActionDefinition> availableActions, 
-            Dictionary<ulong, PropositionNode> positivePropositions,
-            Dictionary<ulong, PropositionNode> negativePropositions)
-        {
-            PositivePropositions = positivePropositions;
-            NegativePropositions = negativePropositions;
-
-            // Names
-            _positiveNames = PositivePropositions.Values
-                .GroupBy(p => p.Proposition.NameId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-            _negativeNames = NegativePropositions.Values
-                .GroupBy(p => p.Proposition.NameId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-
-            // Properties
-            _positiveProperties = PositivePropositions.Values
-                .GroupBy(p => p.Proposition.PropertyId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-            _negativeProperties = NegativePropositions.Values
-                .GroupBy(p => p.Proposition.PropertyId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-
-            // Values
-            _positiveValues = PositivePropositions.Values
-                .GroupBy(p => p.Proposition.ValueId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-            _negativeValues = NegativePropositions.Values
-                .GroupBy(p => p.Proposition.ValueId)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-
-            AvailableActions = availableActions;
-        }
-
-        public IEnumerable<ActionNode> GetAllActions()
-        {
-            return AvailableActions
-                .Values
-                .SelectMany(CalculateActionNodes);
-        }
-
-        public IEnumerable<ActionNode> CalculateActionNodes(ActionDefinition actionDefinition)
-        {
-            ParamSet knownSet = null;
-            uint[] allNames = PositivePropositions.Values
-                .Select(p => p.Proposition.NameId)
-                .Concat(NegativePropositions.Values.Select(p => p.Proposition.NameId))
-                .Distinct()
-                .ToArray();
-
-            // If Action has no parameters
-            if (!actionDefinition.CtParams.Any())
-            {
-                yield return new ActionNode(new Action(actionDefinition, new uint[] { }));
-                yield break;
-            }
-
-            // foreach positive precondition
-            foreach (var positivePrecondition in actionDefinition.PositivePreconditions)
-            {
-                IEnumerable<PropositionNode> propositions = null;
-                int[] valueIdxs = null;
-
-                // Exit if not matches found
-                if (knownSet != null && !knownSet.Params.Any())
-                {
-                    break;
-                }
-                // R L R
-                else if (
-                    positivePrecondition.Name.IsVariableRef && 
-                    positivePrecondition.Property.IsLiteralRef && 
-                    positivePrecondition.Value.IsVariableRef)
-                {
-                    uint property = positivePrecondition.Property.Id.Value;
-                    if (!_positiveProperties.ContainsKey(property))
-                    {
-                        yield break;
-                    }
-
-                    propositions = _positiveProperties[property];
-                    valueIdxs = new[] { positivePrecondition.Name.Idx.Value, positivePrecondition.Value.Idx.Value };
-                }
-                // R L L
-                else if (
-                    positivePrecondition.Name.IsVariableRef && 
-                    positivePrecondition.Property.IsLiteralRef && 
-                    positivePrecondition.Value.IsLiteralRef)
-                {
-                    uint property = positivePrecondition.Property.Id.Value;
-                    uint value = positivePrecondition.Value.Id.Value;
-                    if (!_positiveProperties.ContainsKey(property) || !_positiveValues.ContainsKey(value))
-                    {
-                        yield break;
-                    }
-
-                    propositions = _positiveProperties[property]
-                        .Where(p => p.Proposition.ValueId == positivePrecondition.Value.Id.Value);
-                    valueIdxs = new[] { positivePrecondition.Name.Idx.Value };
-                }
-                // R R R
-                else if (
-                    positivePrecondition.Name.IsVariableRef && 
-                    positivePrecondition.Property.IsVariableRef && 
-                    positivePrecondition.Value.IsVariableRef)
-                {
-                    propositions = PositivePropositions.Values;
-                    valueIdxs = new[] {
-                        positivePrecondition.Name.Idx.Value,
-                        positivePrecondition.Property.Idx.Value,
-                        positivePrecondition.Value.Idx.Value
-                    };
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                // Convert Propositions to Param objects
-                var validParams = propositions
-                    .Select(proposition => {
-                        var ret = new uint[actionDefinition.CtParams.Count];
-                        if (positivePrecondition.Name.IsVariableRef) ret[positivePrecondition.Name.Idx.Value] = proposition.Proposition.NameId;
-                        if (positivePrecondition.Property.IsVariableRef) ret[positivePrecondition.Property.Idx.Value] = proposition.Proposition.PropertyId;
-                        if (positivePrecondition.Value.IsVariableRef) ret[positivePrecondition.Value.Idx.Value] = proposition.Proposition.ValueId;
-                        return ret;
-                    })
-                    .ToList();
-
-                // If first 
-                if (knownSet == null)
-                {
-                    knownSet = new ParamSet(validParams, valueIdxs);
-                }
-                // Join known param with new params
-                else
-                {
-                    var newSet = new ParamSet(validParams, valueIdxs);
-                    knownSet = knownSet.Join(newSet);
-                }
-            }
-
-            if (knownSet != null)
-            {
-                knownSet = knownSet.Expand(actionDefinition, allNames);
-                foreach (var action in knownSet.Params.Select(p => new Action(actionDefinition, p)))
-                {
-                    yield return new ActionNode(action);
-                }
-            }
-        }
-    }
-
-    public class ActionLayer
-    {
-        public List<ActionNode> Actions { get; set; }
-
-        public ActionLayer()
-        {
-            Actions = new List<ActionNode>();
-        }
-    }
-
-    public class PropositionNode : IEqualityComparer<PropositionNode>
-    {
-        public Proposition Proposition { get; set; }
-        public bool Truth { get; set; }
-        public List<ActionNode> ActionEdges { get; set; }
-        public List<PropositionNode> MutexPropositions { get; set; }
-
-        public PropositionNode(Proposition p, bool truth=true)
-        {
-            Proposition = p;
-            Truth = truth;
-            ActionEdges = new List<ActionNode>();
-            MutexPropositions = new List<PropositionNode>();
-        }
-
-        public bool Equals(PropositionNode x, PropositionNode y)
-        {
-            return x.Proposition.Id == y.Proposition.Id;
-        }
-
-        public int GetHashCode(PropositionNode obj)
-        {
-            return obj.Proposition.Id.GetHashCode();
-        }
-    }
-
-    public class ActionNode
-    {
-        public Action Action { get; set; }
-        public List<PropositionNode> PropositionEdges { get; set; }
-        public List<ActionNode> MutexActions { get; set; }
-
-        public ActionNode(Action a)
-        {
-            Action = a;
-            PropositionEdges = new List<PropositionNode>();
-            MutexActions = new List<ActionNode>();
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
             Parser p = new Parser();
-            State2 start = p.ParseState2("data/TicTacStart.txt");
-            State2 end = p.ParseState2("data/TicTacEnd.txt");
-            var actions = p.ParseActions("data/TicTacActions.txt");
 
-            Search(start, end, actions);
-            //Run(state, actionDefs);
+            p.ParseActions("data/BaseActions.txt", false);
+            p.ParseActions("data/worldActions.txt");
+
+            var start = p.ParseState("data/worldStart.txt");
+            var end = p.ParseState("data/worldEnd.txt");
+
+            Cmd(start, p.AllActions.Values);
+            
+            var plan = FindPlan(start, end, p.AllActions.Values);
+
+            foreach (var action in plan)
+            {
+                Console.WriteLine(action);
+            }
         }
 
-        private static void Search(State2 start, State2 end, Dictionary<string, ActionDefinition> actionDefinitions)
+        private static IEnumerable<Action> FindPlan(State start, State end, IEnumerable<ActionDefinition> actionDefs)
         {
-            PropositionLayer pl = new PropositionLayer(actionDefinitions, start.PositivePropositions, start.NegativePropositions);
-            var allActionNodes = pl.GetAllActions().ToList();
+            NodeScorer scorer = new NodeScorer(start, end, actionDefs);
+            HashSet<State> visitedStates = new HashSet<State>();
+
+            // Breads first search on child states 
+            Queue<Node> bfsQueue = new Queue<Node>();
+            bfsQueue.Enqueue(new Node(start, null, null));
+            while(bfsQueue.Any())
+            {
+                Node current = bfsQueue.Dequeue();
+
+                var availableActions = current.State
+                    .GetAllActions(actionDefs);
+
+                var childrenNodes = availableActions
+                    .Select(action => new Node(current.State.ApplyAction(action), current, action))
+                    .Where(node => !visitedStates.Contains(node.State))
+                    .OrderByDescending(scorer.GetNodeScore);
+
+                foreach (var childNode in childrenNodes)
+                {
+                    if (childNode.State.SatisfiesState(end))
+                    {
+                        return (childNode.TracePath());
+                    }
+
+                    visitedStates.Add(childNode.State);
+                    bfsQueue.Enqueue(childNode);
+                }
+            }
+
+            return null;
+        }
+
+        private static void Cmd(State current, IEnumerable<ActionDefinition> actions)
+        {
+            while(true)
+            {
+                var availableActions = current 
+                    .GetAllActions(actions)
+                    .ToList();
+
+                Console.WriteLine("Enter Action:");
+
+                // Read Action
+                var input = Console.ReadLine().Trim();
+                if (input == "a")  // a prints all available actions
+                {
+                    foreach (var a in availableActions)
+                    {
+                        Console.WriteLine(a.ToString());
+                    }
+                }
+                // Print state
+                else if (input == "s")
+                {
+                    Console.WriteLine(current.ToString()); 
+                }
+                // Find and Apply Action
+                else
+                {
+                    // Find Action
+                    var action = availableActions.FirstOrDefault(a => a.ToString().Equals(input, StringComparison.InvariantCultureIgnoreCase));
+                    if (action == null)
+                    {
+                        Console.WriteLine($"Unable to find action {input}");
+                        continue;
+                    }
+
+                    // Apply Action
+                    current = current.ApplyAction(action);
+                }
+            }
+        }
+    }
+
+    public class Node
+    { 
+        public State State { get; } 
+        public Action ParentAction { get; }
+        public Node ParentNode { get; }
+
+        public Node(State state, Node parentNode, Action parentAction)
+        {
+            State = state;
+            ParentNode = parentNode;
+            ParentAction = parentAction;
+        }
+
+        public IEnumerable<Action> TracePath()
+        {
+            return BackTrackPath().Reverse();
+        }
+
+        private IEnumerable<Action> BackTrackPath()
+        {
+            Node current = this;
+            while(current.ParentAction != null)
+            {
+                yield return current.ParentAction;
+                current = current.ParentNode;
+            }
         }
     }
 

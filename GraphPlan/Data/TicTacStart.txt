@@ -1,10 +1,11 @@
-﻿(X is mark)
-(O is mark)
+﻿(X is player)
+(O is player)
 
-(P1 is X)
-(P1 has turn)
+(X has turn)
 
-(P2 is O)
+(hadj is adj)
+(dadj is adj)
+(vadj is adj)
 
 (S0 is square)
 (S0 hadj S1)

@@ -1,18 +1,23 @@
-﻿(player is hungry)
-(player is movable)
-(player name graham)
+﻿(player is movable)
+(player is human)
+(player is hungry)
 (player at home)
 (player has energy)
 (player has car)
-(player is human)
 
 (clerk at store)
 (clerk has meat)
 (clerk is movable)
+(clerk is human)
 
 (store is location)
 
 (park is location)
+(park adjacent road)
+
+(gasStation is location)
+(gasStation has gas)
+(gasStation adjacent store)
 
 (road adjacent store)
 (road is location)
@@ -22,3 +27,6 @@
 
 (meat at store)
 (meat is edible)
+
+(work is location)
+(work adjacent road)

@@ -6,29 +6,34 @@ using System.Threading.Tasks;
 
 namespace GraphPlan
 {
+
     public struct ActionDefinition
     {
         public string Name { get; set; }
-        public HashSet<PropositionDefinition> PositivePreconditions { get; set; }
-        public HashSet<PropositionDefinition> NegativePreconditions { get; set; }
-        public HashSet<PropositionDefinition> PositivePost { get; set; }
-        public HashSet<PropositionDefinition> NegativePost { get; set; }
-        public IList<uint> CtParams { get; set; }
+        public HashSet<PropositionDefinition> PositivePreconditions { get; }
+        public HashSet<PropositionDefinition> NegativePreconditions { get; }
+        public HashSet<PropositionDefinition> PositivePostconditions { get; }
+        public HashSet<PropositionDefinition> NegativePostconditions { get; }
+        public Dictionary<string,int> CtParams { get; }
+
+        public bool IsActionable { get; }
 
         public ActionDefinition(
             string name, 
-            IList<uint> ctParams, 
+            Dictionary<string,int> ctParams, 
             HashSet<PropositionDefinition> posPre, 
             HashSet<PropositionDefinition> negPre, 
             HashSet<PropositionDefinition> posPost, 
-            HashSet<PropositionDefinition> negPost)
+            HashSet<PropositionDefinition> negPost,
+            bool isActionable=true)
         {
             Name = name;
             CtParams = ctParams;
             PositivePreconditions = posPre;
             NegativePreconditions = negPre;
-            PositivePost = posPost;
-            NegativePost = negPost;
+            PositivePostconditions = posPost;
+            NegativePostconditions = negPost;
+            IsActionable = isActionable;
         }
 
         public override string ToString()
@@ -51,7 +56,7 @@ namespace GraphPlan
         public override string ToString()
         {
             string paramStrs = String.Join(" ", Parameters.Select(p => Ids.IdToName[p]));
-            return $"{Definition.Name} {paramStrs}";
+            return $"{Definition.Name} {paramStrs}".Trim();
         }
     }
 }

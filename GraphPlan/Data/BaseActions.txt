@@ -1,0 +1,91 @@
+﻿(add (a p v)
+	(pre
+		(not (a p v))
+	)
+	(post
+		(a p v)
+	)
+)
+
+(del (a p v)
+	(pre
+		(a p v)
+	)
+	(post
+		(not (a p v))
+	)
+)
+
+(has (a p v)
+	(pre
+		(a p v)
+	)
+)
+
+(cp (a b p v)
+	(has (a p v))
+	(add (b p v))
+)
+
+(mv (a b p v)
+	(cp (a b p v))
+	(del (a p v))
+)
+
+(up (a p v1 v2)
+	(del (a p v1))
+	(add (a p v2))
+)
+
+(ex (a b p av bv)
+	(mv (a b p av))
+	(mv (b a p bv))
+)
+
+(addHas (a v)
+	(add (a has v))
+)
+
+(delHas (a v)
+	(del (a has v))
+)
+
+(cpHas (a b v)
+	(cp (a b has v))
+)
+
+(mvHas (a b v)
+	(mv (a b has v))
+)
+
+(exHas (a b av bv)
+	(mvHas (a b av))
+	(mvHas (b a bv))
+)
+
+(upAt (a v1 v2)
+	(up (a at v1 v2))
+)
+
+(upHas (a v1 v2)
+	(up (a has v1 v2))
+)
+
+(cpIs (a b v)
+	(cp (a b is v))
+)
+
+(mvIs (a b v)
+	(mv (a b is v))
+)
+
+(equals (a b p v)
+	(pre
+		(a p v)
+		(b p v)
+	)	
+)
+
+(atequals ( a b loc)
+	(equals (a b at loc))	
+)

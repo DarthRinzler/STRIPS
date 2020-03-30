@@ -7,23 +7,13 @@ using System.Threading.Tasks;
 
 namespace GraphPlan {
 
-    public class State2
-    {
-        public Dictionary<UInt64, PropositionNode> PositivePropositions { get; private set; }
-        public Dictionary<UInt64, PropositionNode> NegativePropositions { get; private set; }
+    public class State : IEqualityComparer<State> {
+        public Dictionary<UInt64, Proposition> Propositions { get; }
+        public Dictionary<uint, Proposition[]> Properties { get; }
+        public Dictionary<uint, Proposition[]> Names { get; }
+        public Dictionary<uint, Proposition[]> Values { get; }
 
-        public State2(Dictionary<ulong, PropositionNode> positivePropositions, Dictionary<ulong, PropositionNode> negativePropositions)
-        {
-            PositivePropositions = positivePropositions;
-            NegativePropositions = negativePropositions;
-        }
-    }
-
-    public class State {
-        public Dictionary<UInt64, Proposition> Propositions { get; private set; }
-        public Dictionary<uint, Proposition[]> Properties { get; private set; }
-        public Dictionary<uint, Proposition[]> Names { get; private set; }
-        public Dictionary<uint, Proposition[]> Values { get; private set; }
+        private int _hashCode;
 
         public State(Dictionary<UInt64, Proposition> propositions) {
             Propositions = propositions;
@@ -39,6 +29,10 @@ namespace GraphPlan {
             Values = Propositions
                 .GroupBy(prop => prop.Value.ValueId)
                 .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
+
+            _hashCode = (int)Propositions
+                .Select(p => p.Key)
+                .Aggregate((a, e) => a ^ e);
         }
 
         public bool SatisfiesPrecondition(Action action) {
@@ -55,13 +49,33 @@ namespace GraphPlan {
             return true;
         }
 
+        public double SatisfiesPreconditionCount(Action action)
+        {
+            int maxCount = action.Definition.PositivePreconditions.Count() + action.Definition.NegativePreconditions.Count();
+            int ret = maxCount;
+
+            foreach (var propositionDefinition in action.Definition.PositivePreconditions)
+            {
+                var proposition = propositionDefinition.GetProposition(action.Parameters);
+                if (!Propositions.ContainsKey(proposition.Id)) ret--;
+            }
+
+            foreach (var p in action.Definition.NegativePreconditions)
+            {
+                var prop = p.GetProposition(action.Parameters);
+                if (Propositions.ContainsKey(prop.Id)) ret--;
+            }
+
+            return ret/(double)maxCount;
+        }
+
         public void ApplyActionMutate(Action action) {
-            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetProposition(action.Parameters));
+            var positiveEffects = action.Definition.PositivePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in positiveEffects) {
                 Propositions[p.Id] = p;
             }
 
-            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetProposition(action.Parameters));
+            var negativeEffects = action.Definition.NegativePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in negativeEffects) {
                 if (Propositions.ContainsKey(p.Id)) {
                     Propositions.Remove(p.Id);
@@ -72,12 +86,12 @@ namespace GraphPlan {
         public State ApplyAction(Action action) {
             var propositions = new Dictionary<UInt64, Proposition>(this.Propositions);
 
-            var positiveEffects = action.Definition.PositivePost.Select(p => p.GetProposition(action.Parameters));
+            var positiveEffects = action.Definition.PositivePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in positiveEffects) {
                 propositions[p.Id] = p;
             }
 
-            var negativeEffects = action.Definition.NegativePost.Select(p => p.GetProposition(action.Parameters));
+            var negativeEffects = action.Definition.NegativePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in negativeEffects) {
                 if (propositions.ContainsKey(p.Id)) {
                     propositions.Remove(p.Id);
@@ -87,11 +101,15 @@ namespace GraphPlan {
             return new State(propositions);
         }
 
-        public IEnumerable<Action> GetAllActions(List<ActionDefinition> actionDefinitions) {
-            return actionDefinitions.SelectMany(GetActionForActionDef);
+        public IEnumerable<Action> GetAllActions(IEnumerable<ActionDefinition> actionDefinitions) {
+            return actionDefinitions
+                .Where(ad => ad.IsActionable)
+                .SelectMany(GetActionsForActionDef);
         }
 
-        private IEnumerable<Action> GetActionForActionDef(ActionDefinition ad) {
+        public IEnumerable<Action> GetActionsForActionDef(ActionDefinition ad) {
+            if (!ad.IsActionable) yield break;
+
             ParamSet knownSet = null;
             var names = Propositions
                 .Select(p => p.Value.NameId)
@@ -113,7 +131,7 @@ namespace GraphPlan {
                     break;
                 }
                 // R L R
-                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Idx.HasValue) {
+                else if (propDef.Name.IsVariableRef && propDef.Property.IsLiteralRef && propDef.Value.IsVariableRef) {
                     uint property = propDef.Property.Id.Value;
                     if (!Properties.ContainsKey(property)) {
                         yield break;
@@ -123,7 +141,7 @@ namespace GraphPlan {
                     valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Value.Idx.Value };
                 }
                 // R L L
-                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Id.HasValue) {
+                else if (propDef.Name.IsVariableRef && propDef.Property.IsLiteralRef && propDef.Value.IsLiteralRef) {
                     uint prop = propDef.Property.Id.Value;
                     if (!Properties.ContainsKey(prop)) {
                         yield break;
@@ -133,7 +151,7 @@ namespace GraphPlan {
                     valueIdxs = new[] { propDef.Name.Idx.Value };
                 }
                 // R R R
-                else if (propDef.Name.Idx.HasValue && propDef.Property.Idx.HasValue && propDef.Value.Idx.HasValue) {
+                else if (propDef.Name.IsVariableRef && propDef.Property.IsVariableRef && propDef.Value.IsVariableRef) {
                     propositions = Propositions.Values;
                     valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Property.Idx.Value, propDef.Value.Idx.Value };
                 }
@@ -160,12 +178,11 @@ namespace GraphPlan {
                 else {
                     var newSet = new ParamSet(validParams, valueIdxs);
                     knownSet = knownSet.Join(newSet);
-                    //Console.WriteLine(knownSet.Params.Count);
                 }
             }
 
             if (knownSet != null) {
-                knownSet = knownSet.Expand(ad, names);
+                knownSet = knownSet.Expand(names);
             }
 
             foreach (PropositionDefinition propDef in ad.NegativePreconditions) {
@@ -180,7 +197,7 @@ namespace GraphPlan {
                 else if (propDef.Name.IsVariableRef && propDef.Property.Id.HasValue && propDef.Value.IsVariableRef) {
                     uint prop = propDef.Property.Id.Value;
                     if (!Properties.ContainsKey(prop)) {
-                        yield break;
+                        break;
                     }
 
                     props = Properties[prop];
@@ -190,7 +207,7 @@ namespace GraphPlan {
                 else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Id.HasValue) {
                     uint prop = propDef.Property.Id.Value;
                     if (!Properties.ContainsKey(prop)) {
-                        yield break;
+                        break;
                     }
 
                     props = Properties[prop]
@@ -226,7 +243,7 @@ namespace GraphPlan {
             }
 
             if (knownSet != null) {
-                knownSet = knownSet.Expand(ad, names);
+                knownSet = knownSet.Expand(names);
                 foreach (var action in knownSet.Params.Select(p => new Action(ad, p))) { 
                     yield return action;
                 }
@@ -235,6 +252,24 @@ namespace GraphPlan {
 
         public override string ToString() {
             return String.Join(" \n", Propositions.Select(p => p.Value.ToString()));
+        }
+
+        public bool Equals(State x, State y)
+        {
+            return
+                x.Propositions.Count() == y.Propositions.Count() &&
+                x.Propositions.All(xp => y.Propositions.ContainsKey(xp.Key));
+        }
+
+        public bool SatisfiesState(State goal)
+        {
+            return
+                goal.Propositions.All(gp => Propositions.ContainsKey(gp.Key));
+        }
+
+        public int GetHashCode(State obj)
+        {
+            return _hashCode;
         }
     }
 
@@ -262,9 +297,9 @@ namespace GraphPlan {
 
     public class ParamSet 
     {
-        public List<uint[]> Params { get; private set; }
-        public int[] ValueIndexes { get; private set; }
-        public int[] AllIdxs { get; private set; }
+        public List<uint[]> Params { get; }
+        public int[] ValueIndexes { get; }
+        public int[] AllIdxs { get; }
 
         public ParamSet(List<uint[]> p, int[] valueIdxs) {
             ValueIndexes = valueIdxs;
@@ -277,9 +312,9 @@ namespace GraphPlan {
         }
 
         public ParamSet(List<uint[]> p) {
-            ValueIndexes = Enumerable
+            ValueIndexes = p.Any() ? Enumerable
                 .Range(0, p.First().Length)
-                .ToArray();
+                .ToArray() : new int[0];
             AllIdxs = ValueIndexes;
             Params = p;
         }
@@ -355,7 +390,7 @@ namespace GraphPlan {
             return new ParamSet(ret, newIndexes);
         }
 
-        public ParamSet Expand(ActionDefinition ad, uint[] names) {
+        public ParamSet Expand(uint[] names) {
             var ret = new List<uint[]>();
 
             if (!Params.Any() || Params.First().All(p => p != 0)) {
