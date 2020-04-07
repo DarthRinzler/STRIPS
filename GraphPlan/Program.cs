@@ -12,20 +12,23 @@ namespace GraphPlan {
         {
             Parser p = new Parser();
 
-            p.ParseActions("data/BaseActions.txt", false);
-            p.ParseActions("data/worldActions.txt");
+            p.ParseActions("data/BaseActions.txt");
+            var actions = p.ParseActions("data/adderActions.txt");
+            var start = p.ParseState("data/adderStart.txt");
 
-            var start = p.ParseState("data/worldStart.txt");
-            var end = p.ParseState("data/worldEnd.txt");
+            //p.ParseActions("data/worldActions.txt");
+            //var start = p.ParseState("data/worldStart.txt");
+            //var end = p.ParseState("data/worldEnd.txt");
 
-            Cmd(start, p.AllActions.Values);
+            Cmd(start, actions);
             
-            var plan = FindPlan(start, end, p.AllActions.Values);
+            /*var plan = FindPlan(start, end, p.AllActions.Values);
 
             foreach (var action in plan)
             {
                 Console.WriteLine(action);
             }
+            */
         }
 
         private static IEnumerable<Action> FindPlan(State start, State end, IEnumerable<ActionDefinition> actionDefs)
@@ -70,6 +73,15 @@ namespace GraphPlan {
                 var availableActions = current 
                     .GetAllActions(actions)
                     .ToList();
+
+                // Auto Run Actions flagged for AutoExecute
+                if (availableActions.Any(a => a.Definition.IsAutoExecute))
+                {
+                    var firstAutoAction = availableActions.First(a => a.Definition.IsAutoExecute);
+                    Console.WriteLine($"AutoExec: {firstAutoAction}");
+                    current = current.ApplyAction(firstAutoAction);
+                    continue;
+                }
 
                 Console.WriteLine("Enter Action:");
 

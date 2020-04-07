@@ -16,7 +16,8 @@ namespace GraphPlan
         public HashSet<PropositionDefinition> NegativePostconditions { get; }
         public Dictionary<string,int> CtParams { get; }
 
-        public bool IsActionable { get; }
+        public bool IsDependent { get; }
+        public bool IsAutoExecute { get; }
 
         public ActionDefinition(
             string name, 
@@ -25,7 +26,8 @@ namespace GraphPlan
             HashSet<PropositionDefinition> negPre, 
             HashSet<PropositionDefinition> posPost, 
             HashSet<PropositionDefinition> negPost,
-            bool isActionable=true)
+            bool isDependent=false,
+            bool isAutoExecute=false)
         {
             Name = name;
             CtParams = ctParams;
@@ -33,7 +35,8 @@ namespace GraphPlan
             NegativePreconditions = negPre;
             PositivePostconditions = posPost;
             NegativePostconditions = negPost;
-            IsActionable = isActionable;
+            IsDependent = isDependent;
+            IsAutoExecute = isAutoExecute;
         }
 
         public override string ToString()

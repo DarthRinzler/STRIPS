@@ -10,17 +10,22 @@ namespace GraphPlan
 {
     public class Tokenizer
     {
+
         private StreamReader _stream;
         private Token _peekToken;
+        private int _lineNum;
         private int _peek;
+        private string _fileName;
         private char[] _singleCharStrings = new[]
         {
             '(', ')', '{', '}'
         };
 
-        public Tokenizer(Stream stream)
+        public Tokenizer(Stream stream, string fileName)
         {
             _stream = new StreamReader(stream);
+            _fileName = fileName;
+            _lineNum = 1;
             Read();
             ReadToken();
         }
@@ -102,19 +107,20 @@ namespace GraphPlan
         {
             while (!_stream.EndOfStream && Char.IsWhiteSpace((char)Peek()))
             {
+                if (Peek() == '\n') _lineNum++;
                 Read();
             }
         }
 
         private void Error(TokenType expected, TokenType actual)
         {
-            throw new Exception(String.Format("Unexpected token found. Expected '{0}' Actual '{1}'", expected, actual));
+            throw new Exception($"{_fileName} Line {_lineNum}: Unexpected token found. Expected '{expected}' Actual '{actual}'");
         }
     }
 
     public enum TokenType
     {
-        LParen, RParen, Id, LBracket, RBracket, Pre, Post, Not
+        LParen, RParen, Id, LBracket, RBracket, Pre, Post, Not, Auto, Dep 
     }
 
     public class Token
@@ -130,6 +136,8 @@ namespace GraphPlan
             else if (Value == "not") Type = TokenType.Not;
             else if (Value == "pre") Type = TokenType.Pre;
             else if (Value == "post") Type = TokenType.Post;
+            else if (Value == "auto") Type = TokenType.Auto;
+            else if (Value == "dep") Type = TokenType.Dep;
             else Type = TokenType.Id;
         }
     }

@@ -103,13 +103,10 @@ namespace GraphPlan {
 
         public IEnumerable<Action> GetAllActions(IEnumerable<ActionDefinition> actionDefinitions) {
             return actionDefinitions
-                .Where(ad => ad.IsActionable)
                 .SelectMany(GetActionsForActionDef);
         }
 
         public IEnumerable<Action> GetActionsForActionDef(ActionDefinition ad) {
-            if (!ad.IsActionable) yield break;
-
             ParamSet knownSet = null;
             var names = Propositions
                 .Select(p => p.Value.NameId)

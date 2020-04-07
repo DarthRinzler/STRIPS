@@ -38,7 +38,7 @@ namespace GraphPlan
         {
             // Reverse all actionable actions
             return actionDefs
-                .Where(ad => ad.IsActionable)
+                .Where(ad => !ad.IsDependent)
                 .Select(ReverseActionDef)
                 .ToArray();
         }
@@ -49,26 +49,6 @@ namespace GraphPlan
             var reversedNegPre = new HashSet<PropositionDefinition>();
             var reversedPosPost = new HashSet<PropositionDefinition>();
             var reversedNegPost = new HashSet<PropositionDefinition>();
-
-            // Copy over all positive preconditions that are NOT negated in the negative postconditions
-            /*
-            foreach (var posPre in actionDef.PositivePreconditions)
-            {
-                if (actionDef.NegativePostconditions.All(negPost => !negPost.EqualsIgnoreNegation(posPre)))
-                {
-                    reversedPosPre.Add(posPre);
-                }
-            }
-
-            // Copy over all negative preconditions that are NOT negated in the positive postconditions
-            foreach (var negPre in actionDef.NegativePreconditions)
-            {
-                if (actionDef.PositivePostconditions.All(posPost => !posPost.EqualsIgnoreNegation(negPre)))
-                {
-                    reversedNegPre.Add(negPre);
-                }
-            }
-            */
 
             // Copy over postConditions as preConditions
             foreach (var posPost in actionDef.PositivePostconditions)
@@ -90,7 +70,6 @@ namespace GraphPlan
                 reversedNegPost.Add(negPre);
             }
 
-            // Add back unaltered preconditions
             return new ActionDefinition(
                 $"_{actionDef.Name}_reversed",
                 actionDef.CtParams,

@@ -1,12 +1,16 @@
-﻿(eat (a food)
-	(uphas (a food satisfaction))
+﻿
+(eat (a food)
 	(pre
 		(a is human)
 		(a is hungry)
 		(food is edible)
+		(a has food)
+		(not (a has satisfaction))
 	)
 	(post
 		(not (a is hungry))
+		(not (a has food))
+		(a has satisfaction)
 	)
 )
 
@@ -51,13 +55,13 @@
 	)
 )
 
-(reachable (a b c)
+(inferadj (a b)
 	(pre
-		(not (a adjacent c))
 		(a adjacent b)
-		(b adjacent c)
+		(not (b adjacent a))
 	)
 	(post
-		(a adjacent c)
+		(b adjacent a)
 	)
 )
+

@@ -39,3 +39,5 @@ C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\BaseAct
 C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldActions.txt
 C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldStart.txt
 C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldEnd.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\adderActions.txt
+C:\Users\great\OneDrive\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\adderStart.txt

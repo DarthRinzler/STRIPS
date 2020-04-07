@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GraphPlan
 {
     public class Parser
     {
-        public Dictionary<string, ActionDefinition> AllActions = new Dictionary<string, ActionDefinition>();
+        private Dictionary<string, ActionDefinition> _baseActions = new Dictionary<string, ActionDefinition>();
 
         public State ParseState(string path)
         {
@@ -17,7 +15,7 @@ namespace GraphPlan
 
             using (var sr = new FileStream(path, FileMode.Open))
             {
-                var tok = new Tokenizer(sr);
+                var tok = new Tokenizer(sr, path);
 
                 while(tok.PeekToken() != null)
                 {
@@ -29,18 +27,24 @@ namespace GraphPlan
             return new State(propositions);
         }
 
-        public Dictionary<string, ActionDefinition> ParseActions(string path, bool isActionable=true)
+        public IEnumerable<ActionDefinition> ParseActions(string path)
         {
+            var ret = new List<ActionDefinition>();
+
             using (var sr = new FileStream(path, FileMode.Open))
             {
-                var tok = new Tokenizer(sr);
+                var tok = new Tokenizer(sr, path);
                 while(tok.PeekToken() != null)
                 {
-                    var obj = ParseAction(tok, AllActions, isActionable);
-                    AllActions.Add(obj.Name, obj);
+                    var action = ParseAction(tok);
+                    if (!action.IsDependent)
+                    {
+                        ret.Add(action);
+                    }
                 }
             }
-            return AllActions;
+
+            return ret;
         }
 
         private Proposition ParseProposition(Tokenizer tok)
@@ -56,6 +60,10 @@ namespace GraphPlan
             }
 
             string name = tok.Consume(TokenType.Id).Value;
+            if (name.Contains('.'))
+            {
+                
+            }
             uint nameId = Ids.GetId(name);
 
             string prop = tok.Consume(TokenType.Id).Value;
@@ -70,7 +78,7 @@ namespace GraphPlan
             return new Proposition(nameId, propId, valId, truth);
         }
 
-        private ActionDefinition ParseAction(Tokenizer tok, Dictionary<string, ActionDefinition> parsedActions, bool isActionable=true)
+        private ActionDefinition ParseAction(Tokenizer tok)
         {
             var posPre = new HashSet<PropositionDefinition>();
             var negPre = new HashSet<PropositionDefinition>();
@@ -80,22 +88,22 @@ namespace GraphPlan
             // Action Name
             tok.Consume(TokenType.LParen);
             string name = tok.Consume(TokenType.Id).Value;
-            if (name.StartsWith("_"))
-            {
-                isActionable = false;
-            }
 
             // Signature
             var parameters = ParseSignature(tok);
 
+            bool isDependentAction = false;
+            bool isAutoExecute = false;
+
             // Optional Dependent Actions
-            while(tok.PeekType() == TokenType.LParen)
+            while (tok.PeekType() == TokenType.LParen)
             {
                 tok.Consume(TokenType.LParen);
 
+                // Dependent Action
                 if (tok.PeekType() == TokenType.Id)
                 {
-                    ParseDependentAction(tok, parameters, parsedActions, posPre, negPre, posPost, negPost);
+                    ParseDependentAction(tok, parameters, posPre, negPre, posPost, negPost);
                 }
                 // Pre Expression
                 else if (tok.PeekType() == TokenType.Pre)
@@ -123,39 +131,60 @@ namespace GraphPlan
                         }
                     }
                 }
+                // AutoExecute Flag
+                else if (tok.PeekType() == TokenType.Auto)
+                {
+                    tok.Consume(TokenType.Auto);
+                    isAutoExecute = true;
+
+                }
+                // Dependent Action Flag
+                else if (tok.PeekType() == TokenType.Dep)
+                {
+                    tok.Consume(TokenType.Dep);
+                    isDependentAction = true;
+                }
                     
                 tok.Consume(TokenType.RParen);
             }
 
             tok.Consume(TokenType.RParen);
 
-            return new ActionDefinition(
+            var ret = new ActionDefinition(
                 name,
                 parameters, 
                 posPre, 
                 negPre, 
                 posPost, 
                 negPost,
-                isActionable
+                isDependentAction,
+                isAutoExecute
             );
+
+            // Cache all dependent actions for future parsing
+            if (isDependentAction)
+            {
+                _baseActions.Add(ret.Name, ret);
+            }
+
+            return ret;
         }
 
         private void ParseDependentAction(
             Tokenizer tok, 
             Dictionary<string,int> parameters,
-            Dictionary<string,ActionDefinition> parsedActions,
             HashSet<PropositionDefinition> posPre,
             HashSet<PropositionDefinition> negPre,
             HashSet<PropositionDefinition> posPost,
             HashSet<PropositionDefinition> negPost) 
         {
             var dependentActionName = tok.Consume(TokenType.Id).Value;
-            if (!parsedActions.ContainsKey(dependentActionName))
+            if (!_baseActions.ContainsKey(dependentActionName))
             {
                 throw new Exception($"Unable to find Dependent Action {dependentActionName}");
             }
 
-            var dependentActionDef = parsedActions[dependentActionName];
+            var dependentActionDef = _baseActions[dependentActionName];
             var dependentSignature = ParseSignature(tok);
 
             var refMapping = dependentSignature
