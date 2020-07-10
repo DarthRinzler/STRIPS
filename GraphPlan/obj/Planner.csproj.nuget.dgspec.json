@@ -1,0 +1,65 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\Planner.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\Planner.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\Planner.csproj",
+        "projectName": "Planner",
+        "projectPath": "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\Planner.csproj",
+        "packagesPath": "C:\\Users\\ghenry\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\obj\\",
+        "projectStyle": "PackageReference",
+        "skipContentFileWrite": true,
+        "fallbackFolders": [
+          "C:\\Microsoft\\Xamarin\\NuGet\\"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\ghenry\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Xamarin.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net461"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net461": {
+            "projectReferences": {}
+          }
+        }
+      },
+      "frameworks": {
+        "net461": {
+          "dependencies": {
+            "OptimizedPriorityQueue": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "System.ValueTuple": {
+              "target": "Package",
+              "version": "[4.5.0, )"
+            }
+          }
+        }
+      },
+      "runtimes": {
+        "win": {
+          "#import": []
+        },
+        "win-x64": {
+          "#import": []
+        },
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "3R/giJfdzgn6YD8+Rw1grQVwXNB/KQKnsQngz8JJuwxU3wn/IjVUsFkWqx6FoqgBMLKu+q2s+wpz1GM+Qmubvg==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ghenry\\Documents\\GitHub\\STRIPS\\GraphPlan\\Planner.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ghenry\\.nuget\\packages\\optimizedpriorityqueue\\4.2.0\\optimizedpriorityqueue.4.2.0.nupkg.sha512",
+    "C:\\Users\\ghenry\\.nuget\\packages\\system.valuetuple\\4.5.0\\system.valuetuple.4.5.0.nupkg.sha512"
+  ],
+  "logs": []
+}

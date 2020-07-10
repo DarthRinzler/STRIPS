@@ -1,0 +1,76 @@
+﻿(import BaseActions)
+
+(buy (a b obj loc)
+	(pre
+		(a is human)
+		(b is human)
+		(loc is location)
+	)
+	(atequals (a b loc))
+	(exhas (a b money obj))
+)
+
+(eat (a food)
+	(pre
+		(a is human)
+		(a is hungry)
+		(food is edible)
+		(a has food)
+		(not (a is satisfied))
+	)
+	(post
+		(not (a is hungry))
+		(not (a has food))
+		(a is satisfied)
+	)
+)
+
+
+(move (a start end)
+	(pre
+		(a is movable)
+		(start is location)
+		(end is location)
+		(start adjacent end)
+	)
+	(upat (a start end))
+)
+
+(work (a)
+	(pre
+		(a at work)
+		(a is human)
+	)
+	(post
+		(a is hungry)	
+	)
+	(uphas (a energy money))
+) 
+
+(inferloc (a b loc)
+	(pre
+		(a has b)
+		(a at loc)
+	)
+	(post
+		(b at loc)
+	)
+)
+
+(inferadj (a b)
+	(pre
+		(a adjacent b)
+		(not (b adjacent a))
+	)
+	(post
+		(b adjacent a)
+	)
+)
+
+(inferhas (a b type)
+	(pre
+		(a has b)
+		(b is type)
+	)
+	(add (a has type))
+)

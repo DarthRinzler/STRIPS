@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GraphPlan
+namespace Planner
 {
     public class Tokenizer
     {
@@ -18,7 +18,7 @@ namespace GraphPlan
         private string _fileName;
         private char[] _singleCharStrings = new[]
         {
-            '(', ')', '{', '}'
+            '(', ')'
         };
 
         public Tokenizer(Stream stream, string fileName)
@@ -33,7 +33,6 @@ namespace GraphPlan
         public Token Consume(TokenType t)
         {
             var tok = ReadToken();
-            Debug.WriteLine(tok.Value);
             if (tok.Type != t) Error(t, tok.Type);
             return tok;
         }
@@ -120,7 +119,7 @@ namespace GraphPlan
 
     public enum TokenType
     {
-        LParen, RParen, Id, LBracket, RBracket, Pre, Post, Not, Auto, Dep 
+        LParen, RParen, Id, LBracket, RBracket, Pre, Post, Not, Auto, Dep, Import
     }
 
     public class Token
@@ -138,6 +137,7 @@ namespace GraphPlan
             else if (Value == "post") Type = TokenType.Post;
             else if (Value == "auto") Type = TokenType.Auto;
             else if (Value == "dep") Type = TokenType.Dep;
+            else if (Value == "import") Type = TokenType.Import;
             else Type = TokenType.Id;
         }
     }

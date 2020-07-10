@@ -5,122 +5,83 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GraphPlan {
+namespace Planner {
 
     public class State : IEqualityComparer<State> {
-        public Dictionary<UInt64, Proposition> Propositions { get; }
-        public Dictionary<uint, Proposition[]> Properties { get; }
-        public Dictionary<uint, Proposition[]> Names { get; }
-        public Dictionary<uint, Proposition[]> Values { get; }
+        public Dictionary<UInt64, Fact> Facts { get; }
+        public Lazy<Dictionary<uint, Fact[]>> Rel { get; }
+        public Lazy<Dictionary<uint, Fact[]>> A { get; }
+        public Lazy<Dictionary<uint, Fact[]>> B { get; }
 
-        private int _hashCode;
+        private Lazy<int> _hashCode;
 
-        public State(Dictionary<UInt64, Proposition> propositions) {
-            Propositions = propositions;
+        public State()
+            : this(new Dictionary<ulong, Fact>())
+        { }
 
-            Names = Propositions
-                .GroupBy(prop => prop.Value.NameId)
-                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
-
-            Properties = Propositions
-                .GroupBy(prop => prop.Value.PropertyId)
-                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
-
-            Values = Propositions
-                .GroupBy(prop => prop.Value.ValueId)
-                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray());
-
-            _hashCode = (int)Propositions
-                .Select(p => p.Key)
-                .Aggregate((a, e) => a ^ e);
-        }
-
-        public bool SatisfiesPrecondition(Action action) {
-            foreach (var propositionDefinition in action.Definition.PositivePreconditions) {
-                var proposition = propositionDefinition.GetProposition(action.Parameters);
-                if (!Propositions.ContainsKey(proposition.Id)) return false;
-            }
-
-            foreach (var p in action.Definition.NegativePreconditions) {
-                var prop = p.GetProposition(action.Parameters);
-                if (Propositions.ContainsKey(prop.Id)) return false;
-            }
-
-            return true;
-        }
-
-        public double SatisfiesPreconditionCount(Action action)
+        public void AddFact(Fact f)
         {
-            int maxCount = action.Definition.PositivePreconditions.Count() + action.Definition.NegativePreconditions.Count();
-            int ret = maxCount;
-
-            foreach (var propositionDefinition in action.Definition.PositivePreconditions)
-            {
-                var proposition = propositionDefinition.GetProposition(action.Parameters);
-                if (!Propositions.ContainsKey(proposition.Id)) ret--;
-            }
-
-            foreach (var p in action.Definition.NegativePreconditions)
-            {
-                var prop = p.GetProposition(action.Parameters);
-                if (Propositions.ContainsKey(prop.Id)) ret--;
-            }
-
-            return ret/(double)maxCount;
+            Facts.Add(f.Id, f);
         }
 
-        public void ApplyActionMutate(Action action) {
-            var positiveEffects = action.Definition.PositivePostconditions.Select(p => p.GetProposition(action.Parameters));
-            foreach (var p in positiveEffects) {
-                Propositions[p.Id] = p;
-            }
+        public State(Dictionary<UInt64, Fact> facts) {
+            Facts = facts;
 
-            var negativeEffects = action.Definition.NegativePostconditions.Select(p => p.GetProposition(action.Parameters));
-            foreach (var p in negativeEffects) {
-                if (Propositions.ContainsKey(p.Id)) {
-                    Propositions.Remove(p.Id);
-                }
-            }
+            A = new Lazy<Dictionary<uint, Fact[]>>(() => Facts
+                .GroupBy(prop => prop.Value.AId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray()));
+
+            Rel = new Lazy<Dictionary<uint, Fact[]>>(() => Facts
+                .GroupBy(prop => prop.Value.RelId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray()));
+
+            B = new Lazy<Dictionary<uint, Fact[]>>(() => Facts
+                .GroupBy(prop => prop.Value.BId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.Value).ToArray()));
+
+            _hashCode = new Lazy<int>(() => (int)Facts
+                .Select(p => p.Key)
+                .Aggregate((a, e) => a ^ e));
         }
 
         public State ApplyAction(Action action) {
-            var propositions = new Dictionary<UInt64, Proposition>(this.Propositions);
+            var facts = new Dictionary<UInt64, Fact>(this.Facts);
 
             var positiveEffects = action.Definition.PositivePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in positiveEffects) {
-                propositions[p.Id] = p;
+                facts[p.Id] = p;
             }
 
             var negativeEffects = action.Definition.NegativePostconditions.Select(p => p.GetProposition(action.Parameters));
             foreach (var p in negativeEffects) {
-                if (propositions.ContainsKey(p.Id)) {
-                    propositions.Remove(p.Id);
+                if (facts.ContainsKey(p.Id)) {
+                    facts.Remove(p.Id);
                 }
             }
 
-            return new State(propositions);
+            return new State(facts);
         }
 
-        public IEnumerable<Action> GetAllActions(IEnumerable<ActionDefinition> actionDefinitions) {
-            return actionDefinitions
-                .SelectMany(GetActionsForActionDef);
+        public IEnumerable<Action> GetAllActions(IEnumerable<ActionDef> actionDefinitions) 
+        {
+            return actionDefinitions.SelectMany(GetActionsForActionDef);
         }
 
-        public IEnumerable<Action> GetActionsForActionDef(ActionDefinition ad) {
+        public IEnumerable<Action> GetActionsForActionDef(ActionDef ad) 
+        {
             ParamSet knownSet = null;
-            var names = Propositions
-                .Select(p => p.Value.NameId)
+            var names = Facts
+                .Select(p => p.Value.AId)
                 .ToArray();
 
             // If action has no parameters
-            if (ad.CtParams.Count == 0) {
-                yield return new Action(ad, new uint[] { });
+            if (ad.Parameters.Length == 0) {
                 yield break;
             }
 
             // Each N+V gets mapped to a paramIdx
-            foreach (PropositionDefinition propDef in ad.PositivePreconditions) {
-                IEnumerable<Proposition> propositions = null;
+            foreach (VariableRelation varRelation in ad.PositivePreconditions) {
+                IEnumerable<Fact> facts = null;
                 int[] valueIdxs = null;
 
                 // Exit if no matches found
@@ -128,41 +89,50 @@ namespace GraphPlan {
                     break;
                 }
                 // R L R
-                else if (propDef.Name.IsVariableRef && propDef.Property.IsLiteralRef && propDef.Value.IsVariableRef) {
-                    uint property = propDef.Property.Id.Value;
-                    if (!Properties.ContainsKey(property)) {
+                else if (varRelation.A.IsFree && varRelation.Rel.IsBound && varRelation.B.IsFree) {
+                    uint property = varRelation.Rel.Id;
+                    if (!Rel.Value.ContainsKey(property)) {
                         yield break;
                     }
 
-                    propositions = Properties[property];
-                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Value.Idx.Value };
+                    facts = Rel.Value[property];
+                    valueIdxs = new[] { varRelation.A.Idx, varRelation.B.Idx };
                 }
                 // R L L
-                else if (propDef.Name.IsVariableRef && propDef.Property.IsLiteralRef && propDef.Value.IsLiteralRef) {
-                    uint prop = propDef.Property.Id.Value;
-                    if (!Properties.ContainsKey(prop)) {
+                else if (varRelation.A.IsFree && varRelation.Rel.IsBound && varRelation.B.IsBound) {
+                    uint prop = varRelation.Rel.Id;
+                    if (!Rel.Value.ContainsKey(prop)) {
                         yield break;
                     }
 
-                    propositions = Properties[prop].Where(p => p.ValueId == propDef.Value.Id.Value);
-                    valueIdxs = new[] { propDef.Name.Idx.Value };
+                    facts = Rel.Value[prop].Where(p => p.BId == varRelation.B.Id);
+                    valueIdxs = new[] { varRelation.A.Idx };
+                }
+                // L L L
+                else if (varRelation.A.IsBound && varRelation.Rel.IsBound && varRelation.B.IsBound)
+                {
+                    throw new NotImplementedException();    
                 }
                 // R R R
-                else if (propDef.Name.IsVariableRef && propDef.Property.IsVariableRef && propDef.Value.IsVariableRef) {
-                    propositions = Propositions.Values;
-                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Property.Idx.Value, propDef.Value.Idx.Value };
+                else if (varRelation.A.IsFree && varRelation.Rel.IsFree && varRelation.B.IsFree) {
+                    facts = Facts.Values;
+                    valueIdxs = new[] { 
+                        varRelation.A.Idx, 
+                        varRelation.Rel.Idx, 
+                        varRelation.B.Idx 
+                    };
                 }
                 else {
                     throw new NotImplementedException();
                 }
 
                 // Convert Preds to Param objects
-                var validParams = propositions  
+                var validParams = facts  
                     .Select(proposition => {
-                        var ret = new uint[ad.CtParams.Count];
-                        if (propDef.Name.IsVariableRef) ret[propDef.Name.Idx.Value] = proposition.NameId;
-                        if (propDef.Property.IsVariableRef) ret[propDef.Property.Idx.Value] = proposition.PropertyId;
-                        if (propDef.Value.IsVariableRef) ret[propDef.Value.Idx.Value] = proposition.ValueId;
+                        var ret = new uint[ad.Parameters.Length];
+                        if (varRelation.A.IsFree) ret[varRelation.A.Idx] = proposition.AId;
+                        if (varRelation.Rel.IsFree) ret[varRelation.Rel.Idx] = proposition.RelId;
+                        if (varRelation.B.IsFree) ret[varRelation.B.Idx] = proposition.BId;
                         return ret;
                     })
                     .ToList();
@@ -182,8 +152,8 @@ namespace GraphPlan {
                 knownSet = knownSet.Expand(names);
             }
 
-            foreach (PropositionDefinition propDef in ad.NegativePreconditions) {
-                IEnumerable<Proposition> props = null;
+            foreach (VariableRelation varRelation in ad.NegativePreconditions) {
+                IEnumerable<Fact> props = null;
                 int[] valueIdxs = null;
 
                 // Exit if no matches found
@@ -191,39 +161,44 @@ namespace GraphPlan {
                     break;
                 }
                 // R L R
-                else if (propDef.Name.IsVariableRef && propDef.Property.Id.HasValue && propDef.Value.IsVariableRef) {
-                    uint prop = propDef.Property.Id.Value;
-                    if (!Properties.ContainsKey(prop)) {
+                else if (varRelation.A.IsFree && varRelation.Rel.IsBound && varRelation.B.IsFree) {
+                    uint prop = varRelation.Rel.Id;
+                    if (!Rel.Value.ContainsKey(prop)) {
                         break;
                     }
 
-                    props = Properties[prop];
-                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Value.Idx.Value };
+                    props = Rel.Value[prop];
+                    valueIdxs = new[] { varRelation.A.Idx, varRelation.B.Idx };
                 }
                 // R L L
-                else if (propDef.Name.Idx.HasValue && propDef.Property.Id.HasValue && propDef.Value.Id.HasValue) {
-                    uint prop = propDef.Property.Id.Value;
-                    if (!Properties.ContainsKey(prop)) {
+                else if (varRelation.A.IsFree && varRelation.Rel.IsBound && varRelation.B.IsBound) {
+                    uint prop = varRelation.Rel.Id;
+                    if (!Rel.Value.ContainsKey(prop)) {
                         break;
                     }
 
-                    props = Properties[prop]
-                        .Where(p => p.ValueId == propDef.Value.Id.Value);
-                    valueIdxs = new[] { propDef.Name.Idx.Value };
+                    props = Rel.Value[prop]
+                        .Where(p => p.BId == varRelation.B.Id);
+                    valueIdxs = new[] { varRelation.A.Idx };
+                }
+                // L L L
+                else if (varRelation.A.IsBound && varRelation.Rel.IsBound && varRelation.B.IsBound)
+                {
+                    throw new NotImplementedException();    
                 }
                 // R R R
                 else {
-                    props = Propositions.Values;
-                    valueIdxs = new[] { propDef.Name.Idx.Value, propDef.Property.Idx.Value, propDef.Value.Idx.Value };
+                    props = Facts.Values;
+                    valueIdxs = new[] { varRelation.A.Idx, varRelation.Rel.Idx, varRelation.B.Idx };
                 }
 
                 // Convert Propositions to Param objects
                 var toRemove = props  
                     .Select(prop => {
-                        var ret = new uint[ad.CtParams.Count];
-                        if (propDef.Name.Idx.HasValue) ret[propDef.Name.Idx.Value] = prop.NameId;
-                        if (propDef.Property.Idx.HasValue) ret[propDef.Property.Idx.Value] = prop.PropertyId;
-                        if (propDef.Value.Idx.HasValue) ret[propDef.Value.Idx.Value] = prop.ValueId;
+                        var ret = new uint[ad.Parameters.Length];
+                        if (varRelation.A.IsFree) ret[varRelation.A.Idx] = prop.AId;
+                        if (varRelation.Rel.IsFree) ret[varRelation.Rel.Idx] = prop.RelId;
+                        if (varRelation.B.IsFree) ret[varRelation.B.Idx] = prop.BId;
                         return ret;
                     })
                     .ToList();
@@ -248,25 +223,25 @@ namespace GraphPlan {
         }
 
         public override string ToString() {
-            return String.Join(" \n", Propositions.Select(p => p.Value.ToString()));
+            return String.Join(" \n", Facts.Select(p => p.Value.ToString()));
         }
 
         public bool Equals(State x, State y)
         {
             return
-                x.Propositions.Count() == y.Propositions.Count() &&
-                x.Propositions.All(xp => y.Propositions.ContainsKey(xp.Key));
+                x.Facts.Count() == y.Facts.Count() &&
+                x.Facts.All(xp => y.Facts.ContainsKey(xp.Key));
         }
 
         public bool SatisfiesState(State goal)
         {
             return
-                goal.Propositions.All(gp => Propositions.ContainsKey(gp.Key));
+                goal.Facts.All(gp => Facts.ContainsKey(gp.Key));
         }
 
         public int GetHashCode(State obj)
         {
-            return _hashCode;
+            return _hashCode.Value;
         }
     }
 

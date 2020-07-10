@@ -3,51 +3,80 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace GraphPlan
+namespace Planner
 {
     public class Parser
     {
-        private Dictionary<string, ActionDefinition> _baseActions = new Dictionary<string, ActionDefinition>();
+        private Dictionary<string, Dictionary<string, ActionDef>> _libs;
+        private readonly string _libDir;
 
-        public State ParseState(string path)
+        public Parser(string libDir)
         {
-            var propositions = new Dictionary<UInt64, Proposition>();
-
-            using (var sr = new FileStream(path, FileMode.Open))
-            {
-                var tok = new Tokenizer(sr, path);
-
-                while(tok.PeekToken() != null)
-                {
-                    var p = ParseProposition(tok);
-                    propositions[p.Id] = p;
-                }
-            }
-
-            return new State(propositions);
+            _libDir = libDir;
+            _libs = new Dictionary<string, Dictionary<string, ActionDef>>();
         }
 
-        public IEnumerable<ActionDefinition> ParseActions(string path)
+        public State ParseState(string fileName)
         {
-            var ret = new List<ActionDefinition>();
+            var ret = new State();
 
+            var path = Path.Combine(_libDir, fileName);
             using (var sr = new FileStream(path, FileMode.Open))
             {
                 var tok = new Tokenizer(sr, path);
-                while(tok.PeekToken() != null)
+
+                while (tok.PeekToken() != null)
                 {
-                    var action = ParseAction(tok);
-                    if (!action.IsDependent)
-                    {
-                        ret.Add(action);
-                    }
+                    var f = ParseFact(tok);
+                    ret.AddFact(f);
                 }
             }
 
             return ret;
         }
 
-        private Proposition ParseProposition(Tokenizer tok)
+        public Dictionary<string, ActionDef> ParseActionFile(string fileName)
+        {
+            var parsedActions = new Dictionary<string, ActionDef>();
+            var path = Path.Combine(_libDir, fileName);
+
+            using (var sr = new FileStream(path, FileMode.Open))
+            {
+                var tok = new Tokenizer(sr, path);
+
+                while (tok.PeekToken() != null)
+                {
+                    tok.Consume(TokenType.LParen);
+                    if (tok.PeekType() == TokenType.Import)
+                    {
+                        ParseImport(tok);
+                    }
+                    else if (tok.PeekType() == TokenType.Id)
+                    {
+                        var actionDef = ParseActionDef(tok, parsedActions);
+                        parsedActions.Add(actionDef.Name, actionDef);
+                    }
+                }
+            }
+
+            return parsedActions;
+        }
+
+        private void ParseImport(Tokenizer tok)
+        {
+            tok.Consume(TokenType.Import);
+            string libName = tok.Consume(TokenType.Id).Value;
+
+            if (!_libs.ContainsKey(libName))
+            {
+                var lib = ParseActionFile(libName + ".txt");
+                _libs[libName] = lib;
+            }
+
+            tok.Consume(TokenType.RParen);
+        }
+
+        private Fact ParseFact(Tokenizer tok)
         {
             tok.Consume(TokenType.LParen);
 
@@ -59,41 +88,36 @@ namespace GraphPlan
                 truth = false;
             }
 
-            string name = tok.Consume(TokenType.Id).Value;
-            if (name.Contains('.'))
-            {
-                
-            }
-            uint nameId = Ids.GetId(name);
+            string a = tok.Consume(TokenType.Id).Value;
+            uint aId = Ids.GetId(a);
 
-            string prop = tok.Consume(TokenType.Id).Value;
-            uint propId = Ids.GetId(prop);
+            string rel = tok.Consume(TokenType.Id).Value;
+            uint relId = Ids.GetId(rel);
 
-            string val = tok.Consume(TokenType.Id).Value;
-            uint valId = Ids.GetId(val);
+            string b = tok.Consume(TokenType.Id).Value;
+            uint bId = Ids.GetId(b);
             tok.Consume(TokenType.RParen);
 
             if (!truth) tok.Consume(TokenType.RParen);
 
-            return new Proposition(nameId, propId, valId, truth);
+            return new Fact(aId, relId, bId, truth);
         }
 
-        private ActionDefinition ParseAction(Tokenizer tok)
+        private ActionDef ParseActionDef(
+            Tokenizer tok, 
+            Dictionary<string, ActionDef> parsedActions)
         {
-            var posPre = new HashSet<PropositionDefinition>();
-            var negPre = new HashSet<PropositionDefinition>();
-            var posPost = new HashSet<PropositionDefinition>();
-            var negPost = new HashSet<PropositionDefinition>();
+            var posPre = new HashSet<VariableRelation>();
+            var negPre = new HashSet<VariableRelation>();
+            var posPost = new HashSet<VariableRelation>();
+            var negPost = new HashSet<VariableRelation>();
 
-            // Action Name
-            tok.Consume(TokenType.LParen);
             string name = tok.Consume(TokenType.Id).Value;
 
             // Signature
             var parameters = ParseSignature(tok);
-
-            bool isDependentAction = false;
-            bool isAutoExecute = false;
+            var paramVars = parameters
+                .ToDictionary(k => k.Name);
 
             // Optional Dependent Actions
             while (tok.PeekType() == TokenType.LParen)
@@ -103,7 +127,11 @@ namespace GraphPlan
                 // Dependent Action
                 if (tok.PeekType() == TokenType.Id)
                 {
-                    ParseDependentAction(tok, parameters, posPre, negPre, posPost, negPost);
+                    var depAction = ParseDependentAction(tok, parsedActions, paramVars);
+                    posPre.AddRange(depAction.PositivePreconditions);
+                    negPre.AddRange(depAction.NegativePreconditions);
+                    posPost.AddRange(depAction.PositivePostconditions);
+                    negPost.AddRange(depAction.NegativePostconditions);
                 }
                 // Pre Expression
                 else if (tok.PeekType() == TokenType.Pre)
@@ -111,7 +139,7 @@ namespace GraphPlan
                     tok.Consume(TokenType.Pre);
                     if (tok.PeekToken().Type != TokenType.RParen)
                     {
-                        var propDefs = ParseConjuction(parameters, tok);
+                        var propDefs = ParseVariableRelations(paramVars, tok);
                         foreach (var pd in propDefs)
                         {
                             var b = pd.Negated ? negPre.Add(pd) : posPre.Add(pd);
@@ -124,25 +152,12 @@ namespace GraphPlan
                     tok.Consume(TokenType.Post);
                     if (tok.PeekToken().Type != TokenType.RParen)
                     {
-                        var propDefs = ParseConjuction(parameters, tok);
+                        var propDefs = ParseVariableRelations(paramVars, tok);
                         foreach (var pd in propDefs)
                         {
                             var b = pd.Negated ? negPost.Add(pd) : posPost.Add(pd);
                         }
                     }
-                }
-                // AutoExecute Flag
-                else if (tok.PeekType() == TokenType.Auto)
-                {
-                    tok.Consume(TokenType.Auto);
-                    isAutoExecute = true;
-
-                }
-                // Dependent Action Flag
-                else if (tok.PeekType() == TokenType.Dep)
-                {
-                    tok.Consume(TokenType.Dep);
-                    isDependentAction = true;
                 }
                     
                 tok.Consume(TokenType.RParen);
@@ -150,99 +165,85 @@ namespace GraphPlan
 
             tok.Consume(TokenType.RParen);
 
-            var ret = new ActionDefinition(
+            var ret = new ActionDef(
                 name,
-                parameters, 
+                paramVars.Values.ToArray(),
                 posPre, 
                 negPre, 
                 posPost, 
-                negPost,
-                isDependentAction,
-                isAutoExecute
+                negPost
             );
 
-            // Cache all dependent actions for future parsing
-            if (isDependentAction)
-            {
-                _baseActions.Add(ret.Name, ret);
-            }
-
             return ret;
         }
 
-        private void ParseDependentAction(
+        private ActionDef ParseDependentAction(
             Tokenizer tok, 
-            Dictionary<string,int> parameters,
-            HashSet<PropositionDefinition> posPre,
-            HashSet<PropositionDefinition> negPre,
-            HashSet<PropositionDefinition> posPost,
-            HashSet<PropositionDefinition> negPost) 
+            Dictionary<string, ActionDef> parsedActions,
+            Dictionary<string, UnboundVariable> parentSignatureMap)
         {
-            var dependentActionName = tok.Consume(TokenType.Id).Value;
-            if (!_baseActions.ContainsKey(dependentActionName))
+            var depActionName = tok.Consume(TokenType.Id).Value;
+
+            ActionDef dependentActionDef;
+            if (!parsedActions.TryGetValue(depActionName, out dependentActionDef))
             {
-                throw new Exception($"Unable to find Dependent Action {dependentActionName}");
+                foreach (var lib in _libs.Values)
+                {
+                    if (lib.TryGetValue(depActionName, out dependentActionDef))
+                    {
+                        break;
+                    }
+                }
             }
 
-            var dependentActionDef = _baseActions[dependentActionName];
-            var dependentSignature = ParseSignature(tok);
+            var depCallSignature = ParseSignature(tok);
 
-            var refMapping = dependentSignature
-                .Where(kvp => parameters.ContainsKey(kvp.Key))
-                .ToDictionary(kvp => kvp.Value, kvp => parameters[kvp.Key]);
+            Variable[] newVars = depCallSignature
+                .Select((dvar, idx) =>
+                    parentSignatureMap.ContainsKey(dvar.Name) 
+                        ? parentSignatureMap[dvar.Name] 
+                        : new BoundVariable(Ids.GetId(dvar.Name)) as Variable)
+                .ToArray();
 
-            var litMapping = dependentSignature
-                .Where(kvp => !parameters.ContainsKey(kvp.Key))
-                .ToDictionary(kvp => kvp.Value, kvp => Ids.GetId(kvp.Key));
-
-            var depPosPrecond = dependentActionDef
-                .PositivePreconditions
-                .Select(p => ReMapPropositionDef(p, refMapping, litMapping));
-            foreach (var dp in depPosPrecond) posPre.Add(dp);
-
-            var depNegPrecond = dependentActionDef
-                .NegativePreconditions
-                .Select(p => ReMapPropositionDef(p, refMapping, litMapping));
-            foreach (var dp in depNegPrecond) negPre.Add(dp);
-
-            var depPosPostcond = dependentActionDef
-                .PositivePostconditions
-                .Select(p => ReMapPropositionDef(p, refMapping, litMapping));
-            foreach (var dp in depPosPostcond) posPost.Add(dp);
-
-            var depNegPostcond = dependentActionDef
-                .NegativePostconditions
-                .Select(p => ReMapPropositionDef(p, refMapping, litMapping));
-            foreach (var dp in depNegPostcond) negPost.Add(dp);
+            string boundVars = String.Join("_", newVars.Where(nv => nv.IsBound).Select(nv => nv.Name));
+            string newActionName = $"{depActionName}_{boundVars}";
+            var reboundAction = dependentActionDef.RebindVariables(newVars, newActionName);
+            return reboundAction;
         }
 
-        private Dictionary<string, int> ParseSignature(Tokenizer tok)
+        private UnboundVariable[] ParseSignature(Tokenizer tok)
         {
-            var ret = new Dictionary<string, int>();
+            var ret = new List<UnboundVariable>();
             tok.Consume(TokenType.LParen);
-            int counter = 0;
+            int idx = 0;
             while (tok.PeekToken().Type != TokenType.RParen)
             {
-                string param = tok.Consume(TokenType.Id).Value;
-                ret[param] = counter++;
+                string name = tok.Consume(TokenType.Id).Value;
+                var variable = new UnboundVariable(idx, name);
+                ret.Add(variable);
+                idx++;
             }
             tok.Consume(TokenType.RParen);
-            return ret;
+            return ret.ToArray();
         }
 
-        private IList<PropositionDefinition> ParseConjuction(Dictionary<string, int> parameters, Tokenizer tok)
+        private IList<VariableRelation> ParseVariableRelations(
+            Dictionary<string, UnboundVariable> paramVars, 
+            Tokenizer tok)
         {
-            var predicates = new List<PropositionDefinition>();
+            var predicates = new List<VariableRelation>();
             while (tok.PeekToken().Type != TokenType.RParen)
             {
-                PropositionDefinition pred = ParsePropositionDefinition(parameters, tok);
+                VariableRelation pred = ParseVariableRelation(paramVars, tok);
                 predicates.Add(pred);
             }
 
             return predicates;
         }
 
-        private PropositionDefinition ParsePropositionDefinition(Dictionary<string, int> parameters, Tokenizer tok)
+        private VariableRelation ParseVariableRelation(
+            Dictionary<string, UnboundVariable> paramVars,
+            Tokenizer tok)
         {
             bool negated = false;
             tok.Consume(TokenType.LParen);
@@ -261,89 +262,27 @@ namespace GraphPlan
 
             if (negated) tok.Consume(TokenType.RParen);
 
-            return GetPropDef(parameters, negated, nameStr, propStr, valStr);
+            return GetPropDef(paramVars, negated, nameStr, propStr, valStr);
         }
 
-        private static PropositionDefinition GetPropDef(Dictionary<string, int> parameters, bool negated, string nameStr, string propStr, string valStr)
+        private static VariableRelation GetPropDef(
+            Dictionary<string, UnboundVariable> paramVars,
+            bool negated,
+            string nameStr,
+            string propStr,
+            string valStr)
         {
-            CtParameter name = new CtParameter();
-            name.ParamName = nameStr;
-            if (parameters.ContainsKey(nameStr)) name.Idx = parameters[nameStr];
-            else name.Id = Ids.GetId(nameStr);
-
-            CtParameter property = new CtParameter();
-            property.ParamName = propStr;
-            if (parameters.ContainsKey(propStr)) property.Idx = parameters[propStr];
-            else property.Id = Ids.GetId(propStr);
-
-            CtParameter value = new CtParameter();
-            value.ParamName = valStr;
-            if (parameters.ContainsKey(valStr)) value.Idx = parameters[valStr];
-            else value.Id = Ids.GetId(valStr);
-
-            return new PropositionDefinition(name, property, value, negated);
-        }
-
-        private PropositionDefinition ReMapPropositionDef(PropositionDefinition propDef, Dictionary<int,int> refMapping, Dictionary<int,uint> litMapping)
-        {
-            CtParameter name = new CtParameter();
-            name.ParamName = propDef.Name.ParamName;    
-            if (propDef.Name.IsVariableRef && !litMapping.ContainsKey(propDef.Name.Idx.Value)) {
-                name.Idx = refMapping[propDef.Name.Idx.Value];
-                name.Id = null;
-            }
-            else if (propDef.Name.IsVariableRef && litMapping.ContainsKey(propDef.Name.Idx.Value))
+            Func<string, Variable> GetParam = (str) =>
             {
-                name.Id = litMapping[propDef.Name.Idx.Value];
-            }
-            else {
-                name.Id = propDef.Name.Id;
-                name.Idx = null;
-            }
+                if (paramVars.ContainsKey(str)) return paramVars[str];
+                else return new BoundVariable(Ids.GetId(str));
+            };
 
-            CtParameter property = new CtParameter();
-            property.ParamName = propDef.Property.ParamName;
-            if (propDef.Property.IsVariableRef && !litMapping.ContainsKey(propDef.Property.Idx.Value)) {
-                property.Idx = refMapping[propDef.Property.Idx.Value];
-                property.Id = null;
-            }
-            else if (propDef.Property.IsVariableRef && litMapping.ContainsKey(propDef.Property.Idx.Value))
-            {
-                property.Id = litMapping[propDef.Property.Idx.Value];
-            }
-            else {
-                property.Id = propDef.Property.Id;
-                property.Idx = null;
-            }
+            Variable name = GetParam(nameStr);
+            Variable property = GetParam(propStr);
+            Variable value = GetParam(valStr);
 
-            CtParameter value = new CtParameter();
-            value.ParamName = propDef.Value.ParamName;  
-            if (propDef.Value.IsVariableRef && !litMapping.ContainsKey(propDef.Value.Idx.Value)) {
-                value.Idx = refMapping[propDef.Value.Idx.Value];
-                value.Id = null;
-            }
-            else if (propDef.Value.IsVariableRef && litMapping.ContainsKey(propDef.Value.Idx.Value))
-            {
-                value.Id = litMapping[propDef.Value.Idx.Value];
-            }
-            else {
-                value.Id = propDef.Value.Id;
-                value.Idx = null;
-            }
-
-            Func<CtParameter, bool> isValid = (ct) => (ct.Id != null) ^ (ct.Idx != null);
-            if (!isValid(name) || !isValid(property) || !isValid(value))
-            {
-                Console.WriteLine("here");
-            }
-
-            var ret = new PropositionDefinition(name, property, value, propDef.Negated);
-            return ret;
-        }
-
-        private void Error(TokenType expected, TokenType actual)
-        {
-            throw new Exception(String.Format("Unexpected token found. Expected '{0}' Actual '{1}'", expected, actual));
+            return new VariableRelation(name, property, value, negated);
         }
     }
 }

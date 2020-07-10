@@ -3,27 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Priority_Queue; 
 
-namespace GraphPlan {
+namespace Planner {
 
     class Program
     {
         static void Main(string[] args)
         {
-            Parser p = new Parser();
+            Parser p = new Parser("data");
 
-            p.ParseActions("data/BaseActions.txt");
-            var actions = p.ParseActions("data/adderActions.txt");
-            var start = p.ParseState("data/adderStart.txt");
+            var actions = p.ParseActionFile("worldActions.txt");
+            var start = p.ParseState("worldStart.txt");
+            var end = p.ParseState("worldEnd.txt");
 
-            //p.ParseActions("data/worldActions.txt");
-            //var start = p.ParseState("data/worldStart.txt");
-            //var end = p.ParseState("data/worldEnd.txt");
-
-            Cmd(start, actions);
+            //Cmd(start, actions.Values);
             
-            /*var plan = FindPlan(start, end, p.AllActions.Values);
+            var plan = FindPlan(start, end, actions.Values);
 
+            /*
             foreach (var action in plan)
             {
                 Console.WriteLine(action);
@@ -31,25 +29,27 @@ namespace GraphPlan {
             */
         }
 
-        private static IEnumerable<Action> FindPlan(State start, State end, IEnumerable<ActionDefinition> actionDefs)
+        private static IEnumerable<Action> FindPlan(State start, State end, IEnumerable<ActionDef> actionDefs)
         {
-            NodeScorer scorer = new NodeScorer(start, end, actionDefs);
+            StateScorer scorer = new StateScorer(start, end, actionDefs);
             HashSet<State> visitedStates = new HashSet<State>();
 
             // Breads first search on child states 
-            Queue<Node> bfsQueue = new Queue<Node>();
-            bfsQueue.Enqueue(new Node(start, null, null));
+            FastPriorityQueue<StateNode> bfsQueue = new FastPriorityQueue<StateNode>(2000000);
+
+            var initialNode = new StateNode(start, null, null, scorer);
+            bfsQueue.Enqueue(initialNode, initialNode.Priority);
             while(bfsQueue.Any())
             {
-                Node current = bfsQueue.Dequeue();
+                StateNode current = bfsQueue.Dequeue();
 
                 var availableActions = current.State
-                    .GetAllActions(actionDefs);
+                    .GetAllActions(actionDefs)
+                    .ToArray();
 
                 var childrenNodes = availableActions
-                    .Select(action => new Node(current.State.ApplyAction(action), current, action))
-                    .Where(node => !visitedStates.Contains(node.State))
-                    .OrderByDescending(scorer.GetNodeScore);
+                    .Select(action => new StateNode(current.State.ApplyAction(action), current, action, scorer))
+                    .Where(stateNode => !visitedStates.Contains(stateNode.State));
 
                 foreach (var childNode in childrenNodes)
                 {
@@ -59,29 +59,20 @@ namespace GraphPlan {
                     }
 
                     visitedStates.Add(childNode.State);
-                    bfsQueue.Enqueue(childNode);
+                    bfsQueue.Enqueue(childNode, childNode.Priority);
                 }
             }
 
             return null;
         }
 
-        private static void Cmd(State current, IEnumerable<ActionDefinition> actions)
+        private static void Cmd(State current, IEnumerable<ActionDef> actions)
         {
             while(true)
             {
                 var availableActions = current 
                     .GetAllActions(actions)
                     .ToList();
-
-                // Auto Run Actions flagged for AutoExecute
-                if (availableActions.Any(a => a.Definition.IsAutoExecute))
-                {
-                    var firstAutoAction = availableActions.First(a => a.Definition.IsAutoExecute);
-                    Console.WriteLine($"AutoExec: {firstAutoAction}");
-                    current = current.ApplyAction(firstAutoAction);
-                    continue;
-                }
 
                 Console.WriteLine("Enter Action:");
 
@@ -117,15 +108,16 @@ namespace GraphPlan {
         }
     }
 
-    public class Node
+    public class StateNode : FastPriorityQueueNode, IComparable<StateNode>
     { 
         public State State { get; } 
         public Action ParentAction { get; }
-        public Node ParentNode { get; }
+        public StateNode ParentNode { get; }
 
-        public Node(State state, Node parentNode, Action parentAction)
+        public StateNode(State state, StateNode parentNode, Action parentAction, StateScorer scorer)
         {
             State = state;
+            Priority = scorer.GetStateScore(state);
             ParentNode = parentNode;
             ParentAction = parentAction;
         }
@@ -137,33 +129,17 @@ namespace GraphPlan {
 
         private IEnumerable<Action> BackTrackPath()
         {
-            Node current = this;
+            StateNode current = this;
             while(current.ParentAction != null)
             {
                 yield return current.ParentAction;
                 current = current.ParentNode;
             }
         }
-    }
 
-    public static class Ids {
-        public static Dictionary<uint, string> IdToName = new Dictionary<uint, string>();
-        public static Dictionary<string, uint> NameToId = new Dictionary<string, uint>();
-
-        private static uint s_idCounter = 1;
-
-        public static uint GetId(string name) {
-            uint id;
-            if (NameToId.TryGetValue(name, out id)) {
-                return id;
-            }
-            else {
-                id = s_idCounter++;
-            }
-
-            NameToId[name] = id;
-            IdToName[id] = name;
-            return id;
+        public int CompareTo(StateNode other)
+        {
+            return this.Priority.CompareTo(other.Priority);
         }
     }
 }

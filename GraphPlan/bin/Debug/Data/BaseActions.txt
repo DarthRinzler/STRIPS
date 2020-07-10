@@ -1,4 +1,4 @@
-﻿(add (a p v) (dep)
+﻿(add (a p v) 
 	(pre
 		(not (a p v))
 	)
@@ -7,7 +7,7 @@
 	)
 )
 
-(del (a p v) (dep)
+(del (a p v) 
 	(pre
 		(a p v)
 	)
@@ -16,75 +16,75 @@
 	)
 )
 
-(cp (a b p v) (dep) 
+(cp (a b p v)  
 	(pre (a p v))
 	(add (b p v))
 )
 
-(mv (a b p v) (dep)
+(mv (a b p v) 
 	(cp (a b p v))
 	(del (a p v))
 )
 
-(up (a p v1 v2) (dep)
+(up (a p v1 v2) 
 	(del (a p v1))
 	(add (a p v2))
 )
 
-(ex (a b p av bv) (dep)
+(ex (a b p av bv) 
 	(mv (a b p av))
 	(mv (b a p bv))
 )
 
-(addHas (a v) (dep)
+(addHas (a v) 
 	(add (a has v))
 )
 
-(delHas (a v) (dep)
+(delHas (a v) 
 	(del (a has v))
 )
 
-(cpHas (a b v) (dep)
+(cpHas (a b v) 
 	(cp (a b has v))
 )
 
-(mvHas (a b v) (dep)
-	(mv (a b has v))
+(mvHas (ma mb mv) 
+	(mv (ma mb has mv))
 )
 
-(exHas (a b av bv) (dep)
+(exHas (a b av bv) 
 	(mvHas (a b av))
 	(mvHas (b a bv))
 )
 
-(upAt (a v1 v2) (dep)
+(upAt (a v1 v2) 
 	(up (a at v1 v2))
 )
 
-(upHas (a v1 v2) (dep)
+(upHas (a v1 v2) 
 	(up (a has v1 v2))
 )
 
-(cpIs (a b v) (dep)
+(cpIs (a b v) 
 	(cp (a b is v))
 )
 
-(mvIs (a b v) (dep)
+(mvIs (a b v) 
 	(mv (a b is v))
 )
 
-(equals (a b p v) (dep)
+(equals (a b p v) 
 	(pre
 		(a p v)
 		(b p v)
 	)	
 )
 
-(atequals (a b loc) (dep)
+(atequals (a b loc) 
 	(equals (a b at loc))	
 )
 
-(transitive (a b c rel) (dep)
+(transitive (a b c rel) 
 	(pre
 		(a rel b)
 		(b rel c)
@@ -92,12 +92,16 @@
 	(add (a rel c))
 )
 
-(symmetric (a rel b) (dep)
+(reverse (a r b) 
+	(add (b r a))
+)
+
+(symmetric (a rel b) 
 	(pre (a rel b))
 	(add (b rel a))
 )
 
-(reachable (a b c) (dep)
+(reachable (a b c) 
 	(pre
 		(a adjacent b)
 		(b adjacent c)
@@ -105,6 +109,10 @@
 	(add (a reachable c))
 )
 
-(reachableSym (a b) (dep)
+(reachableSym (a b) 
 	(symmetric (a reachable b))	
+)
+
+(istrans (obj typea typeb)
+	(transitive (obj typea typeb is))
 )

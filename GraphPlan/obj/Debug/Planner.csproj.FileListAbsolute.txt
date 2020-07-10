@@ -1,0 +1,20 @@
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\adderActions.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\adderStart.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldActions.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\BaseActions.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\TicTacActions.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\TicTacEnd.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldStart.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\TicTacStart.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\worldEnd.txt
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.exe.config
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.exe
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\GraphPlan.pdb
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\Planner.csprojAssemblyReference.cache
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\Planner.csproj.CoreCompileInputs.cache
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.exe
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\GraphPlan.pdb
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\System.ValueTuple.dll
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\Planner.csproj.CopyComplete
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Priority Queue.dll
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Priority Queue.pdb
