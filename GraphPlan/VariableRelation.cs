@@ -73,7 +73,7 @@ namespace Planner
     }
 
     //[x][21][21][21]
-    //Name,Prop,Value,
+    //A,Rel,B,
     public struct Fact
         : IEqualityComparer<Fact>, IEquatable<Fact>
     {

@@ -18,3 +18,4 @@ C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\System.ValueTuple.dl
 C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\obj\Debug\Planner.csproj.CopyComplete
 C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Priority Queue.dll
 C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Priority Queue.pdb
+C:\Users\ghenry\Documents\GitHub\STRIPS\GraphPlan\bin\Debug\Data\baseStart.txt

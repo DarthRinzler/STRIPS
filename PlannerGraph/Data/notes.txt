@@ -1,3 +1,0 @@
-﻿Abstraction can be achieved by Taking a plan and turning it into an action by encapsulating all of the local variables as things which the plan creates from scratch.
-While the inputs and outputs are things that change from the outside. This new super task-action can be parameterized as an asbraction. Two plans that achieve 
-the same results are considered equal
